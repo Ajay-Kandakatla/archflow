@@ -2,16 +2,44 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
+const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { Readable } = require('stream');
-const { connect, getDiagrams, getImageBucket, toObjectId, ObjectId } = require('./db');
+const { connect, getDiagrams, getUsers, getImageBucket, toObjectId, ObjectId } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'archflow-dev-secret-change-in-prod';
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'Ajaykandakatla@gmail.com').toLowerCase();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// =============================================
+// Auth Middleware
+// =============================================
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  try {
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user.email.toLowerCase() !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
 
 // =============================================
 // Config endpoint (serves Google Client ID to frontend)
@@ -45,7 +73,29 @@ app.post('/api/auth/google', async (req, res) => {
       picture: payload.picture || null,
     };
 
-    res.json({ user });
+    // Upsert user in DB
+    await getUsers().updateOne(
+      { _id: payload.sub },
+      {
+        $set: {
+          email: payload.email,
+          name: user.name,
+          picture: user.picture,
+          lastLoginAt: new Date(),
+        },
+        $setOnInsert: { createdAt: new Date() },
+      },
+      { upsert: true }
+    );
+
+    // Sign a server token
+    const token = jwt.sign(
+      { userId: payload.sub, email: payload.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ user, token });
   } catch (e) {
     console.error('Auth error:', e);
     res.status(401).json({ error: 'Authentication failed' });
@@ -53,14 +103,13 @@ app.post('/api/auth/google', async (req, res) => {
 });
 
 // =============================================
-// Diagrams API
+// Diagrams API (all require auth)
 // =============================================
 
-// List all diagrams (optionally filtered by userId)
-app.get('/api/diagrams', async (req, res) => {
+// List user's diagrams
+app.get('/api/diagrams', requireAuth, async (req, res) => {
   try {
-    const filter = {};
-    if (req.query.userId) filter.userId = req.query.userId;
+    const filter = { userId: req.user.userId };
     const rows = await getDiagrams()
       .find(filter, { projection: { data: 0 } })
       .sort({ updatedAt: -1 })
@@ -73,7 +122,7 @@ app.get('/api/diagrams', async (req, res) => {
 });
 
 // Get one diagram with full data
-app.get('/api/diagrams/:id', async (req, res) => {
+app.get('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
     const doc = await getDiagrams().findOne({ _id: req.params.id });
     if (!doc) return res.status(404).json({ error: 'Not found' });
@@ -85,12 +134,12 @@ app.get('/api/diagrams/:id', async (req, res) => {
 });
 
 // Create new diagram
-app.post('/api/diagrams', async (req, res) => {
+app.post('/api/diagrams', requireAuth, async (req, res) => {
   try {
     const doc = {
       _id: uuidv4(),
       name: req.body.name || 'Untitled Diagram',
-      userId: req.body.userId || null,
+      userId: req.user.userId,
       createdAt: new Date(),
       updatedAt: new Date(),
       data: req.body.data || {},
@@ -104,7 +153,7 @@ app.post('/api/diagrams', async (req, res) => {
 });
 
 // Update diagram (auto-save target)
-app.put('/api/diagrams/:id', async (req, res) => {
+app.put('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
     const update = { $set: { updatedAt: new Date() } };
     if (req.body.name !== undefined) update.$set.name = req.body.name;
@@ -124,7 +173,7 @@ app.put('/api/diagrams/:id', async (req, res) => {
 });
 
 // Delete diagram
-app.delete('/api/diagrams/:id', async (req, res) => {
+app.delete('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
     const result = await getDiagrams().deleteOne({ _id: req.params.id });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
@@ -139,8 +188,8 @@ app.delete('/api/diagrams/:id', async (req, res) => {
 // Images API (GridFS)
 // =============================================
 
-// Upload image
-app.post('/api/images', upload.single('image'), async (req, res) => {
+// Upload image (requires auth)
+app.post('/api/images', requireAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -168,7 +217,7 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
   }
 });
 
-// Get image
+// Get image (public - img tags can't send auth headers)
 app.get('/api/images/:id', async (req, res) => {
   try {
     const oid = toObjectId(req.params.id);
@@ -189,8 +238,8 @@ app.get('/api/images/:id', async (req, res) => {
   }
 });
 
-// Delete image
-app.delete('/api/images/:id', async (req, res) => {
+// Delete image (requires auth)
+app.delete('/api/images/:id', requireAuth, async (req, res) => {
   try {
     const oid = toObjectId(req.params.id);
     if (!oid) return res.status(400).json({ error: 'Invalid image ID' });
@@ -199,6 +248,49 @@ app.delete('/api/images/:id', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to delete image' });
+  }
+});
+
+// =============================================
+// Admin API
+// =============================================
+
+// List all users with diagram counts
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const allUsers = await getUsers().find({}).sort({ lastLoginAt: -1 }).toArray();
+
+    const diagramCounts = await getDiagrams().aggregate([
+      { $group: { _id: '$userId', count: { $sum: 1 } } }
+    ]).toArray();
+    const countMap = {};
+    diagramCounts.forEach(d => { countMap[d._id] = d.count; });
+
+    const result = allUsers.map(u => ({
+      id: u._id,
+      email: u.email,
+      name: u.name,
+      picture: u.picture,
+      createdAt: u.createdAt,
+      lastLoginAt: u.lastLoginAt,
+      diagramCount: countMap[u._id] || 0,
+    }));
+
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Summary statistics
+app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const totalUsers = await getUsers().countDocuments();
+    const totalDiagrams = await getDiagrams().countDocuments();
+    res.json({ totalUsers, totalDiagrams });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
