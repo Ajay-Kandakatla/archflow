@@ -215,8 +215,8 @@ app.get('*', (req, res) => {
 async function start() {
   try {
     await connect();
-    app.listen(PORT, () => {
-      console.log(`\n  ArchFlow running at http://localhost:${PORT}\n`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n  ArchFlow running at http://0.0.0.0:${PORT}\n`);
     });
   } catch (e) {
     console.error('Failed to start:', e.message);
