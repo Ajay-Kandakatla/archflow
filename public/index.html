@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchFlow — Architecture Diagram Builder</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-dark: #0f1117;
+            --bg-card: #1a1d27;
+            --bg-sidebar: #161822;
+            --accent-blue: #4f8ff7;
+            --accent-green: #34d399;
+            --accent-purple: #a78bfa;
+            --accent-orange: #fb923c;
+            --accent-red: #f87171;
+            --accent-cyan: #22d3ee;
+            --accent-pink: #f472b6;
+            --accent-yellow: #fbbf24;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3148;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+        }
+
+        /* Top Bar */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .logo {
+            font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .logo-icon {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px;
+        }
+        .topbar-center { display: flex; align-items: center; gap: 8px; }
+        .tool-btn {
+            padding: 8px 12px; background: transparent; border: 1px solid transparent;
+            border-radius: 8px; color: var(--text-secondary); cursor: pointer;
+            font-size: 13px; display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .tool-btn:hover { background: rgba(79,143,247,0.1); border-color: var(--border-color); color: var(--text-primary); }
+        .tool-btn.active { background: rgba(79,143,247,0.15); border-color: var(--accent-blue); color: var(--accent-blue); }
+        .topbar-right { display: flex; align-items: center; gap: 8px; }
+        .zoom-controls {
+            display: flex; align-items: center; gap: 4px;
+            background: var(--bg-card); border-radius: 8px; padding: 4px;
+        }
+        .zoom-btn {
+            width: 30px; height: 30px; background: transparent; border: none;
+            border-radius: 6px; color: var(--text-secondary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s;
+        }
+        .zoom-btn:hover { background: rgba(79,143,247,0.1); color: var(--text-primary); }
+        .zoom-level { font-size: 12px; color: var(--text-secondary); min-width: 40px; text-align: center; }
+        .action-btn {
+            padding: 8px 16px; border: none; border-radius: 8px; color: white;
+            cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .btn-save { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); }
+        .btn-export { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; top: 52px; left: 0; bottom: 0;
+            width: 260px; background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            z-index: 999; overflow-y: auto; padding: 16px 12px;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .sidebar-section { margin-bottom: 20px; }
+        .sidebar-title {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 10px; padding: 0 4px;
+        }
+        .component-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .component-item {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 12px 8px; cursor: grab;
+            text-align: center; transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .component-item:hover {
+            border-color: var(--accent-blue); transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79,143,247,0.15);
+        }
+        .component-item:active { cursor: grabbing; transform: scale(0.95); }
+        .component-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+        .component-name { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+        .component-item::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 3px; border-radius: 10px 10px 0 0;
+        }
+        .component-item[data-color="blue"]::before { background: var(--accent-blue); }
+        .component-item[data-color="green"]::before { background: var(--accent-green); }
+        .component-item[data-color="purple"]::before { background: var(--accent-purple); }
+        .component-item[data-color="orange"]::before { background: var(--accent-orange); }
+        .component-item[data-color="red"]::before { background: var(--accent-red); }
+        .component-item[data-color="cyan"]::before { background: var(--accent-cyan); }
+        .component-item[data-color="pink"]::before { background: var(--accent-pink); }
+        .component-item[data-color="yellow"]::before { background: var(--accent-yellow); }
+
+        /* Canvas */
+        .canvas-container {
+            position: fixed; top: 52px; left: 260px; right: 0; bottom: 0;
+            overflow: hidden; background: var(--bg-dark);
+        }
+        .canvas {
+            position: absolute; width: 8000px; height: 8000px; transform-origin: 0 0;
+        }
+        .grid-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, rgba(79,143,247,0.08) 1px, transparent 1px);
+            background-size: 30px 30px; pointer-events: none;
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute; min-width: 170px; background: var(--bg-card);
+            border: 2px solid var(--border-color); border-radius: 14px;
+            cursor: move; transition: box-shadow 0.2s; z-index: 10;
+        }
+        .node:hover { z-index: 20; }
+        .node.selected { z-index: 30; }
+        .node-header {
+            padding: 12px 16px 8px; display: flex; align-items: center;
+            gap: 10px; border-bottom: 1px solid var(--border-color);
+        }
+        .node-icon { font-size: 22px; flex-shrink: 0; }
+        .node-title {
+            font-size: 13px; font-weight: 600; flex: 1; outline: none;
+            background: transparent; border: none; color: var(--text-primary); font-family: inherit;
+        }
+        .node-body { padding: 10px 16px 14px; }
+        .node-desc {
+            font-size: 11px; line-height: 1.5; outline: none; min-height: 16px;
+            background: transparent; border: none; color: var(--text-secondary);
+            font-family: inherit; width: 100%; resize: none;
+        }
+        .node-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 20px;
+            font-size: 10px; font-weight: 600; margin-top: 6px;
+        }
+
+        /* Node colors */
+        .node[data-color="blue"] { border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(79,143,247,0.15); }
+        .node[data-color="blue"] .node-badge { background: rgba(79,143,247,0.15); color: var(--accent-blue); }
+        .node[data-color="blue"].selected { box-shadow: 0 0 30px rgba(79,143,247,0.3); }
+        .node[data-color="green"] { border-color: var(--accent-green); box-shadow: 0 0 20px rgba(52,211,153,0.15); }
+        .node[data-color="green"] .node-badge { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+        .node[data-color="green"].selected { box-shadow: 0 0 30px rgba(52,211,153,0.3); }
+        .node[data-color="purple"] { border-color: var(--accent-purple); box-shadow: 0 0 20px rgba(167,139,250,0.15); }
+        .node[data-color="purple"] .node-badge { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+        .node[data-color="purple"].selected { box-shadow: 0 0 30px rgba(167,139,250,0.3); }
+        .node[data-color="orange"] { border-color: var(--accent-orange); box-shadow: 0 0 20px rgba(251,146,60,0.15); }
+        .node[data-color="orange"] .node-badge { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+        .node[data-color="orange"].selected { box-shadow: 0 0 30px rgba(251,146,60,0.3); }
+        .node[data-color="red"] { border-color: var(--accent-red); box-shadow: 0 0 20px rgba(248,113,113,0.15); }
+        .node[data-color="red"] .node-badge { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+        .node[data-color="red"].selected { box-shadow: 0 0 30px rgba(248,113,113,0.3); }
+        .node[data-color="cyan"] { border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(34,211,238,0.15); }
+        .node[data-color="cyan"] .node-badge { background: rgba(34,211,238,0.15); color: var(--accent-cyan); }
+        .node[data-color="cyan"].selected { box-shadow: 0 0 30px rgba(34,211,238,0.3); }
+        .node[data-color="pink"] { border-color: var(--accent-pink); box-shadow: 0 0 20px rgba(244,114,182,0.15); }
+        .node[data-color="pink"] .node-badge { background: rgba(244,114,182,0.15); color: var(--accent-pink); }
+        .node[data-color="pink"].selected { box-shadow: 0 0 30px rgba(244,114,182,0.3); }
+        .node[data-color="yellow"] { border-color: var(--accent-yellow); box-shadow: 0 0 20px rgba(251,191,36,0.15); }
+        .node[data-color="yellow"] .node-badge { background: rgba(251,191,36,0.15); color: var(--accent-yellow); }
+        .node[data-color="yellow"].selected { box-shadow: 0 0 30px rgba(251,191,36,0.3); }
+
+        /* Connection ports */
+        .node-port {
+            position: absolute; width: 14px; height: 14px;
+            background: var(--bg-dark); border: 2px solid var(--border-color);
+            border-radius: 50%; cursor: crosshair; z-index: 40; transition: all 0.2s;
+        }
+        .node-port:hover, .node-port.active {
+            background: var(--accent-blue); border-color: var(--accent-blue);
+            transform: scale(1.3); box-shadow: 0 0 10px rgba(79,143,247,0.5);
+        }
+        .node-port.top { top: -7px; left: 50%; transform: translateX(-50%); }
+        .node-port.bottom { bottom: -7px; left: 50%; transform: translateX(-50%); }
+        .node-port.left { left: -7px; top: 50%; transform: translateY(-50%); }
+        .node-port.right { right: -7px; top: 50%; transform: translateY(-50%); }
+        .node-port.top:hover { transform: translateX(-50%) scale(1.3); }
+        .node-port.bottom:hover { transform: translateX(-50%) scale(1.3); }
+        .node-port.left:hover { transform: translateY(-50%) scale(1.3); }
+        .node-port.right:hover { transform: translateY(-50%) scale(1.3); }
+
+        .node-delete {
+            position: absolute; top: -10px; right: -10px; width: 22px; height: 22px;
+            background: var(--accent-red); border: none; border-radius: 50%;
+            color: white; cursor: pointer; display: none; align-items: center;
+            justify-content: center; font-size: 12px; z-index: 50;
+        }
+        .node.selected .node-delete { display: flex; }
+
+        /* SVG Connections */
+        .connections-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 5;
+        }
+        .connections-layer svg { width: 100%; height: 100%; }
+        .connection-path { fill: none; stroke-width: 2.5; pointer-events: stroke; cursor: pointer; }
+        .connection-path:hover { stroke-width: 4; }
+        .flow-particle { filter: blur(0.5px); }
+        .connection-label {
+            font-size: 11px; font-weight: 500; fill: var(--text-secondary);
+            pointer-events: all; cursor: pointer;
+        }
+        .connection-label-bg { fill: var(--bg-dark); rx: 6; pointer-events: none; }
+
+        /* Sticky Notes */
+        .sticky-note {
+            position: absolute; min-width: 200px; min-height: 130px;
+            padding: 16px; border-radius: 4px; cursor: move; z-index: 8;
+            box-shadow: 3px 3px 12px rgba(0,0,0,0.4); font-size: 13px; line-height: 1.5;
+        }
+        .sticky-note.yellow { background: #fef3c7; color: #92400e; }
+        .sticky-note.blue { background: #dbeafe; color: #1e40af; }
+        .sticky-note.green { background: #d1fae5; color: #065f46; }
+        .sticky-note.pink { background: #fce7f3; color: #9d174d; }
+        .sticky-note-text {
+            outline: none; width: 100%; height: 100%; min-height: 90px;
+            background: transparent; border: none; font: inherit; color: inherit; resize: none;
+        }
+        .sticky-delete {
+            position: absolute; top: -8px; right: -8px; width: 20px; height: 20px;
+            background: rgba(0,0,0,0.5); border: none; border-radius: 50%;
+            color: white; cursor: pointer; display: none; align-items: center;
+            justify-content: center; font-size: 11px;
+        }
+        .sticky-note:hover .sticky-delete { display: flex; }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 6px; min-width: 180px; z-index: 9999;
+            display: none; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        .context-menu-item {
+            padding: 8px 14px; border-radius: 6px; cursor: pointer;
+            font-size: 13px; color: var(--text-secondary); display: flex;
+            align-items: center; gap: 10px; transition: all 0.15s;
+        }
+        .context-menu-item:hover { background: rgba(79,143,247,0.1); color: var(--text-primary); }
+        .context-menu-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
+
+        /* Minimap */
+        .minimap {
+            position: fixed; bottom: 16px; right: 16px;
+            width: 180px; height: 120px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 10px;
+            overflow: hidden; z-index: 998; opacity: 0.8; transition: opacity 0.2s;
+        }
+        .minimap:hover { opacity: 1; }
+        .minimap-viewport {
+            position: absolute; border: 1.5px solid var(--accent-blue);
+            background: rgba(79,143,247,0.05); border-radius: 2px; pointer-events: none;
+        }
+        .minimap-node { position: absolute; border-radius: 2px; pointer-events: none; }
+
+        /* Animations */
+        @keyframes flowDash { to { stroke-dashoffset: -20; } }
+        @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card); border: 1px solid var(--accent-green);
+            border-radius: 10px; padding: 12px 24px; color: var(--accent-green);
+            font-size: 13px; font-weight: 500; z-index: 9999;
+            transition: transform 0.3s ease; display: flex; align-items: center; gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Hint */
+        .hint-overlay {
+            position: fixed; top: 52px; left: 260px; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 100; transition: opacity 0.5s;
+        }
+        .hint-box {
+            background: rgba(26,29,39,0.9); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 32px 40px; text-align: center; max-width: 420px;
+        }
+        .hint-box h2 {
+            font-size: 18px; margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hint-box p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+        .hint-box kbd {
+            background: var(--bg-dark); border: 1px solid var(--border-color);
+            border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: monospace;
+        }
+
+        /* Template Modal */
+        .template-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+        .template-modal-overlay.visible { opacity: 1; pointer-events: all; }
+        .template-modal {
+            background: var(--bg-sidebar); border: 1px solid var(--border-color);
+            border-radius: 20px; width: 820px; max-width: 92vw; max-height: 85vh;
+            overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform: translateY(20px) scale(0.97); transition: transform 0.3s ease;
+        }
+        .template-modal-overlay.visible .template-modal { transform: translateY(0) scale(1); }
+        .template-modal-header {
+            padding: 24px 28px 16px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .template-modal-header h2 {
+            font-size: 20px; font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .template-modal-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+        .template-modal-close {
+            width: 36px; height: 36px; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 10px; color: var(--text-secondary); cursor: pointer; font-size: 18px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .template-modal-close:hover { background: rgba(248,113,113,0.15); color: var(--accent-red); border-color: var(--accent-red); }
+        .template-modal-body { padding: 20px 28px 28px; overflow-y: auto; }
+        .template-modal-body::-webkit-scrollbar { width: 4px; }
+        .template-modal-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .template-category { margin-bottom: 22px; }
+        .template-category-title {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1.2px; color: var(--text-secondary); margin-bottom: 12px;
+        }
+        .template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .template-card {
+            background: var(--bg-card); border: 1.5px solid var(--border-color);
+            border-radius: 14px; padding: 20px 16px 16px; cursor: pointer;
+            transition: all 0.25s ease; position: relative; overflow: hidden;
+        }
+        .template-card:hover {
+            border-color: var(--accent-blue); transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(79,143,247,0.2);
+        }
+        .template-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .template-card-preview {
+            font-size: 28px; margin-bottom: 10px; display: flex; gap: 4px; flex-wrap: wrap;
+            height: 40px; overflow: hidden; align-items: center;
+        }
+        .template-card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+        .template-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+        .template-card-badge {
+            position: absolute; top: 10px; right: 10px; padding: 2px 8px;
+            border-radius: 20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .template-card[data-accent="blue"]::before { background: var(--accent-blue); }
+        .template-card[data-accent="blue"] .template-card-badge { background: rgba(79,143,247,0.15); color: var(--accent-blue); }
+        .template-card[data-accent="green"]::before { background: var(--accent-green); }
+        .template-card[data-accent="green"] .template-card-badge { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+        .template-card[data-accent="purple"]::before { background: var(--accent-purple); }
+        .template-card[data-accent="purple"] .template-card-badge { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+        .template-card[data-accent="orange"]::before { background: var(--accent-orange); }
+        .template-card[data-accent="orange"] .template-card-badge { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+        .template-card[data-accent="cyan"]::before { background: var(--accent-cyan); }
+        .template-card[data-accent="cyan"] .template-card-badge { background: rgba(34,211,238,0.15); color: var(--accent-cyan); }
+        .template-card[data-accent="pink"]::before { background: var(--accent-pink); }
+        .template-card[data-accent="pink"] .template-card-badge { background: rgba(244,114,182,0.15); color: var(--accent-pink); }
+        .template-card[data-accent="yellow"]::before { background: var(--accent-yellow); }
+        .template-card[data-accent="yellow"] .template-card-badge { background: rgba(251,191,36,0.15); color: var(--accent-yellow); }
+        .template-card[data-accent="red"]::before { background: var(--accent-red); }
+        .template-card[data-accent="red"] .template-card-badge { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+        .template-card-blank {
+            border-style: dashed; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; min-height: 120px;
+        }
+        .template-card-blank:hover { border-color: var(--accent-green); }
+        .template-card-blank .blank-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+        .template-card-blank .blank-text { font-size: 13px; color: var(--text-secondary); }
+        .btn-templates {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+        }
+
+        /* Project Panel */
+        .project-panel {
+            position: fixed; top: 52px; left: 0; bottom: 0; width: 260px;
+            background: var(--bg-sidebar); border-right: 1px solid var(--border-color);
+            z-index: 1001; overflow-y: auto; padding: 16px 12px;
+            transform: translateX(-100%); transition: transform 0.25s ease;
+        }
+        .project-panel.open { transform: translateX(0); }
+        .project-panel::-webkit-scrollbar { width: 4px; }
+        .project-panel::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .project-item {
+            padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 13px; color: var(--text-secondary); transition: all 0.15s;
+        }
+        .project-item:hover { background: rgba(79,143,247,0.1); color: var(--text-primary); }
+        .project-item.active { background: rgba(79,143,247,0.15); color: var(--accent-blue); border-left: 3px solid var(--accent-blue); }
+        .project-item-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+        .project-item-date { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+        .project-item-del {
+            background: none; border: none; color: var(--text-secondary); cursor: pointer;
+            font-size: 14px; opacity: 0; transition: all 0.15s; padding: 4px;
+        }
+        .project-item:hover .project-item-del { opacity: 1; }
+        .project-item-del:hover { color: var(--accent-red); }
+        .project-new-btn {
+            width: 100%; padding: 10px; background: rgba(79,143,247,0.1);
+            border: 1px dashed var(--accent-blue); border-radius: 8px;
+            color: var(--accent-blue); cursor: pointer; font-size: 13px; font-weight: 500;
+            margin-bottom: 12px; transition: all 0.15s;
+        }
+        .project-new-btn:hover { background: rgba(79,143,247,0.2); }
+        .diagram-name-display {
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            color: var(--text-secondary); padding: 4px 10px; border-radius: 6px;
+            max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            border: 1px solid transparent; transition: all 0.2s;
+        }
+        .diagram-name-display:hover { background: rgba(79,143,247,0.1); color: var(--text-primary); border-color: var(--border-color); }
+
+        /* Auth / User */
+        .auth-btn {
+            padding: 6px 14px; background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 8px; color: var(--text-secondary); cursor: pointer;
+            font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .auth-btn:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+        .auth-btn img { width: 18px; height: 18px; border-radius: 50%; }
+        .user-avatar { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid var(--border-color); transition: border-color 0.2s; }
+        .user-avatar:hover { border-color: var(--accent-blue); }
+        .user-menu {
+            position: absolute; top: 46px; right: 8px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 10px; padding: 8px;
+            min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: none; z-index: 1100;
+        }
+        .user-menu.show { display: block; }
+        .user-menu-header { padding: 8px 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px; }
+        .user-menu-header .name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+        .user-menu-header .email { font-size: 11px; color: var(--text-secondary); }
+        .user-menu-item {
+            padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            color: var(--text-secondary); transition: all 0.15s;
+        }
+        .user-menu-item:hover { background: rgba(79,143,247,0.1); color: var(--text-primary); }
+
+        /* Canvas Images */
+        .canvas-image {
+            position: absolute; cursor: move; z-index: 9; border: 2px solid transparent;
+            border-radius: 8px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s;
+            background: var(--bg-card);
+        }
+        .canvas-image:hover { border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(79,143,247,0.15); }
+        .canvas-image.selected { border-color: var(--accent-blue); box-shadow: 0 0 30px rgba(79,143,247,0.3); }
+        .canvas-image img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+        .canvas-image-delete {
+            position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+            background: var(--accent-red); border: none; border-radius: 50%; color: white;
+            cursor: pointer; display: none; align-items: center; justify-content: center; font-size: 12px; z-index: 50;
+        }
+        .canvas-image:hover .canvas-image-delete { display: flex; }
+        .canvas-image-resize {
+            position: absolute; bottom: -4px; right: -4px; width: 12px; height: 12px;
+            background: var(--accent-blue); border-radius: 50%; cursor: nwse-resize; z-index: 50;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .canvas-image:hover .canvas-image-resize { opacity: 1; }
+
+        /* Auto-save indicator */
+        .autosave-indicator {
+            font-size: 11px; color: var(--text-secondary); padding: 4px 8px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .autosave-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); }
+        .autosave-dot.saving { background: var(--accent-yellow); animation: pulse 0.8s infinite; }
+
+        @media print {
+            .topbar, .sidebar, .minimap, .zoom-controls, .context-menu, .hint-overlay, .template-modal-overlay { display: none !important; }
+            .canvas-container { position: static !important; left: 0 !important; top: 0 !important; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="logo-icon">&#x2B21;</div>
+            <span class="logo">ArchFlow</span>
+            <button class="tool-btn" id="projectsBtn" onclick="toggleProjectPanel()" title="Projects">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                Projects
+            </button>
+            <span class="diagram-name-display" id="diagramName" onclick="renameDiagram()" title="Click to rename">Untitled Diagram</span>
+            <div class="autosave-indicator" id="autosaveIndicator" style="display:none">
+                <span class="autosave-dot" id="autosaveDot"></span>
+                <span id="autosaveText">Saved</span>
+            </div>
+        </div>
+        <div class="topbar-center">
+            <button class="tool-btn active" id="selectTool" onclick="setTool('select')" title="Select & Move (V)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+                Select
+            </button>
+            <button class="tool-btn" id="connectTool" onclick="setTool('connect')" title="Connect (C)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Connect
+            </button>
+            <button class="tool-btn" id="noteTool" onclick="setTool('note')" title="Sticky Note (N)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15.5 3H5a2 2 0 00-2 2v14c0 1.1.9 2 2 2h14a2 2 0 002-2V8.5L15.5 3z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Note
+            </button>
+            <button class="tool-btn" id="imageTool" onclick="triggerImageUpload()" title="Add Image (I)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Image
+            </button>
+            <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageFileSelect(event)">
+        </div>
+        <div class="topbar-right">
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomOut()">&#x2212;</button>
+                <span class="zoom-level" id="zoomLevel">100%</span>
+                <button class="zoom-btn" onclick="zoomIn()">+</button>
+                <button class="zoom-btn" onclick="resetZoom()" title="Reset">&#x27F3;</button>
+            </div>
+            <button class="action-btn btn-templates" onclick="showTemplateModal()">Templates</button>
+            <button class="action-btn btn-save" onclick="saveDiagram()">Save</button>
+            <button class="action-btn btn-export" onclick="exportPNG()">Export</button>
+            <div id="authArea">
+                <button class="auth-btn" id="signInBtn" onclick="startGoogleSignIn()">
+                    <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    Sign in
+                </button>
+            </div>
+            <div class="user-menu" id="userMenu">
+                <div class="user-menu-header">
+                    <div class="name" id="userMenuName"></div>
+                    <div class="email" id="userMenuEmail"></div>
+                </div>
+                <div class="user-menu-item" onclick="signOut()">Sign out</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Client Layer</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="browser" data-color="blue" draggable="true">
+                    <span class="component-icon">&#x1F310;</span>
+                    <span class="component-name">Browser</span>
+                </div>
+                <div class="component-item" data-type="mobile" data-color="blue" draggable="true">
+                    <span class="component-icon">&#x1F4F1;</span>
+                    <span class="component-name">Mobile App</span>
+                </div>
+                <div class="component-item" data-type="desktop" data-color="blue" draggable="true">
+                    <span class="component-icon">&#x1F5A5;&#xFE0F;</span>
+                    <span class="component-name">Desktop</span>
+                </div>
+                <div class="component-item" data-type="iot" data-color="blue" draggable="true">
+                    <span class="component-icon">&#x1F4E1;</span>
+                    <span class="component-name">IoT Device</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Network / Gateway</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="api-gateway" data-color="green" draggable="true">
+                    <span class="component-icon">&#x1F6AA;</span>
+                    <span class="component-name">API Gateway</span>
+                </div>
+                <div class="component-item" data-type="load-balancer" data-color="green" draggable="true">
+                    <span class="component-icon">&#x2696;&#xFE0F;</span>
+                    <span class="component-name">Load Balancer</span>
+                </div>
+                <div class="component-item" data-type="cdn" data-color="green" draggable="true">
+                    <span class="component-icon">&#x1F30D;</span>
+                    <span class="component-name">CDN</span>
+                </div>
+                <div class="component-item" data-type="dns" data-color="green" draggable="true">
+                    <span class="component-icon">&#x1F517;</span>
+                    <span class="component-name">DNS</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Application</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="server" data-color="purple" draggable="true">
+                    <span class="component-icon">&#x2699;&#xFE0F;</span>
+                    <span class="component-name">App Server</span>
+                </div>
+                <div class="component-item" data-type="microservice" data-color="purple" draggable="true">
+                    <span class="component-icon">&#x1F9E9;</span>
+                    <span class="component-name">Microservice</span>
+                </div>
+                <div class="component-item" data-type="serverless" data-color="purple" draggable="true">
+                    <span class="component-icon">&#x26A1;</span>
+                    <span class="component-name">Serverless</span>
+                </div>
+                <div class="component-item" data-type="auth" data-color="purple" draggable="true">
+                    <span class="component-icon">&#x1F510;</span>
+                    <span class="component-name">Auth Service</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Database / Storage</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="postgres" data-color="red" draggable="true">
+                    <span class="component-icon">&#x1F418;</span>
+                    <span class="component-name">PostgreSQL</span>
+                </div>
+                <div class="component-item" data-type="mongodb" data-color="red" draggable="true">
+                    <span class="component-icon">&#x1F343;</span>
+                    <span class="component-name">MongoDB</span>
+                </div>
+                <div class="component-item" data-type="mysql" data-color="red" draggable="true">
+                    <span class="component-icon">&#x1F5C4;&#xFE0F;</span>
+                    <span class="component-name">MySQL</span>
+                </div>
+                <div class="component-item" data-type="s3" data-color="orange" draggable="true">
+                    <span class="component-icon">&#x1F4E6;</span>
+                    <span class="component-name">Object Store</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Cache / Queue</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="redis" data-color="cyan" draggable="true">
+                    <span class="component-icon">&#x1F48E;</span>
+                    <span class="component-name">Redis</span>
+                </div>
+                <div class="component-item" data-type="memcached" data-color="cyan" draggable="true">
+                    <span class="component-icon">&#x1F9CA;</span>
+                    <span class="component-name">Memcached</span>
+                </div>
+                <div class="component-item" data-type="kafka" data-color="orange" draggable="true">
+                    <span class="component-icon">&#x1F4E8;</span>
+                    <span class="component-name">Kafka</span>
+                </div>
+                <div class="component-item" data-type="rabbitmq" data-color="orange" draggable="true">
+                    <span class="component-icon">&#x1F430;</span>
+                    <span class="component-name">RabbitMQ</span>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Monitoring</div>
+            <div class="component-grid">
+                <div class="component-item" data-type="monitoring" data-color="pink" draggable="true">
+                    <span class="component-icon">&#x1F4CA;</span>
+                    <span class="component-name">Monitoring</span>
+                </div>
+                <div class="component-item" data-type="logging" data-color="pink" draggable="true">
+                    <span class="component-icon">&#x1F4DD;</span>
+                    <span class="component-name">Logging</span>
+                </div>
+                <div class="component-item" data-type="analytics" data-color="yellow" draggable="true">
+                    <span class="component-icon">&#x1F4C8;</span>
+                    <span class="component-name">Analytics</span>
+                </div>
+                <div class="component-item" data-type="search" data-color="yellow" draggable="true">
+                    <span class="component-icon">&#x1F50D;</span>
+                    <span class="component-name">Search</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Panel -->
+    <div class="project-panel" id="projectPanel">
+        <div class="sidebar-title">Your Diagrams</div>
+        <button class="project-new-btn" onclick="newDiagram()">+ New Diagram</button>
+        <div id="projectList"></div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-container" id="canvasContainer">
+        <div class="canvas" id="canvas">
+            <div class="grid-bg"></div>
+            <div class="connections-layer" id="connectionsLayer">
+                <svg id="connectionsSvg">
+                    <defs>
+                        <marker id="ah-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#4f8ff7"/></marker>
+                        <marker id="ah-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#34d399"/></marker>
+                        <marker id="ah-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#a78bfa"/></marker>
+                        <marker id="ah-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#fb923c"/></marker>
+                        <marker id="ah-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#f87171"/></marker>
+                        <marker id="ah-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+                        <marker id="ah-pink" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#f472b6"/></marker>
+                        <marker id="ah-yellow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#fbbf24"/></marker>
+                        <filter id="glow"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    </defs>
+                </svg>
+            </div>
+        </div>
+        <div class="hint-overlay" id="hintOverlay">
+            <div class="hint-box">
+                <h2>Welcome to ArchFlow</h2>
+                <p>
+                    Drag components from the sidebar onto the canvas.<br>
+                    Press <kbd>C</kbd> to connect nodes with animated arrows.<br>
+                    Press <kbd>N</kbd> to add sticky notes.<br>
+                    <kbd>Scroll</kbd> to zoom, <kbd>Space+Drag</kbd> to pan.<br>
+                    Right-click for more options.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimap -->
+    <div class="minimap" id="minimap"><div class="minimap-viewport" id="minimapViewport"></div></div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="addStickyNote('yellow')">Yellow Note</div>
+        <div class="context-menu-item" onclick="addStickyNote('blue')">Blue Note</div>
+        <div class="context-menu-item" onclick="addStickyNote('green')">Green Note</div>
+        <div class="context-menu-item" onclick="addStickyNote('pink')">Pink Note</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="selectAllNodes()">Select All</div>
+        <div class="context-menu-item" onclick="fitToScreen()">Fit to Screen</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="clearCanvas()">Clear Canvas</div>
+    </div>
+
+    <!-- Template Modal -->
+    <div class="template-modal-overlay" id="templateModal">
+        <div class="template-modal">
+            <div class="template-modal-header">
+                <div>
+                    <h2>Choose a Template</h2>
+                    <p>Start with a pre-built architecture or blank canvas</p>
+                </div>
+                <button class="template-modal-close" onclick="hideTemplateModal()">&#x2715;</button>
+            </div>
+            <div class="template-modal-body">
+                <div class="template-category">
+                    <div class="template-category-title">Architecture Patterns</div>
+                    <div class="template-grid">
+                        <div class="template-card" data-accent="red" onclick="loadTemplate('persistent-db')">
+                            <div class="template-card-preview">&#x1F310; &#x2696;&#xFE0F; &#x1F6AA; &#x2699;&#xFE0F; &#x1F418;</div>
+                            <div class="template-card-title">Persistent Database</div>
+                            <div class="template-card-desc">Full-stack with LB, API Gateway, cache, SQL &amp; NoSQL databases</div>
+                            <span class="template-card-badge">Popular</span>
+                        </div>
+                        <div class="template-card" data-accent="purple" onclick="loadTemplate('microservices')">
+                            <div class="template-card-preview">&#x1F6AA; &#x1F9E9; &#x1F9E9; &#x1F9E9; &#x1F4E8;</div>
+                            <div class="template-card-title">Microservices</div>
+                            <div class="template-card-desc">API Gateway with multiple services, each with its own database</div>
+                            <span class="template-card-badge">Architecture</span>
+                        </div>
+                        <div class="template-card" data-accent="orange" onclick="loadTemplate('event-driven')">
+                            <div class="template-card-preview">&#x26A1; &#x1F4E8; &#x1F4E8; &#x2699;&#xFE0F; &#x1F4CA;</div>
+                            <div class="template-card-title">Event-Driven</div>
+                            <div class="template-card-desc">Producers, Kafka topics, consumers, and analytics pipeline</div>
+                            <span class="template-card-badge">Async</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="template-category">
+                    <div class="template-category-title">Cloud &amp; DevOps</div>
+                    <div class="template-grid">
+                        <div class="template-card" data-accent="cyan" onclick="loadTemplate('serverless')">
+                            <div class="template-card-preview">&#x1F30D; &#x1F6AA; &#x26A1; &#x26A1; &#x1F4E6;</div>
+                            <div class="template-card-title">Serverless</div>
+                            <div class="template-card-desc">CDN, API Gateway, Lambda functions, DynamoDB, S3</div>
+                            <span class="template-card-badge">Cloud</span>
+                        </div>
+                        <div class="template-card" data-accent="green" onclick="loadTemplate('cicd')">
+                            <div class="template-card-preview">&#x1F4DD; &#x2699;&#xFE0F; &#x1F50D; &#x1F4E6; &#x1F4CA;</div>
+                            <div class="template-card-title">CI/CD Pipeline</div>
+                            <div class="template-card-desc">Git, Build, Test, Deploy stages with monitoring</div>
+                            <span class="template-card-badge">DevOps</span>
+                        </div>
+                        <div class="template-card" data-accent="yellow" onclick="loadTemplate('data-pipeline')">
+                            <div class="template-card-preview">&#x1F4E1; &#x1F4E8; &#x2699;&#xFE0F; &#x1F4E6; &#x1F4C8;</div>
+                            <div class="template-card-title">Data Pipeline</div>
+                            <div class="template-card-desc">Ingestion, streaming, processing, data lake, dashboard</div>
+                            <span class="template-card-badge">Data</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="template-category">
+                    <div class="template-category-title">Planning &amp; Collaboration</div>
+                    <div class="template-grid">
+                        <div class="template-card" data-accent="blue" onclick="loadTemplate('basic-webapp')">
+                            <div class="template-card-preview">&#x1F310; &#x2696;&#xFE0F; &#x2699;&#xFE0F; &#x1F418;</div>
+                            <div class="template-card-title">Basic Web App</div>
+                            <div class="template-card-desc">Simple 3-tier: Client, Server, Database starter</div>
+                            <span class="template-card-badge">Starter</span>
+                        </div>
+                        <div class="template-card" data-accent="pink" onclick="loadTemplate('mind-map')">
+                            <div class="template-card-preview">&#x1F4A1; &#x1F4DD; &#x1F4DD; &#x1F4DD; &#x1F4DD;</div>
+                            <div class="template-card-title">Mind Map</div>
+                            <div class="template-card-desc">Central idea with radial branches for brainstorming</div>
+                            <span class="template-card-badge">Planning</span>
+                        </div>
+                        <div class="template-card" data-accent="cyan" onclick="loadTemplate('swimlanes')">
+                            <div class="template-card-preview">&#x1F3CA; &#x2699;&#xFE0F; &#x2699;&#xFE0F; &#x2699;&#xFE0F;</div>
+                            <div class="template-card-title">Swimlanes</div>
+                            <div class="template-card-desc">Process flow across teams: Frontend, Backend, DevOps, QA</div>
+                            <span class="template-card-badge">Process</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="template-category">
+                    <div class="template-category-title">Start Fresh</div>
+                    <div class="template-grid">
+                        <div class="template-card template-card-blank" onclick="loadTemplate('blank')">
+                            <div class="blank-icon">+</div>
+                            <div class="blank-text">Blank Canvas</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // === State ===
+    let nodes=[], connections=[], stickyNotes=[], canvasImages=[];
+    let selectedNode=null, currentTool='select', scale=1, panX=0, panY=0;
+    let isPanning=false, panStartX, panStartY;
+    let isDragging=false, dragNode=null, dragOffsetX, dragOffsetY;
+    let connectFrom=null, connectFromPort=null, tempLine=null;
+    let nodeIdCounter=0, connectionIdCounter=0, noteIdCounter=0, imageIdCounter=0;
+    let spacePressed=false, contextMenuX=0, contextMenuY=0;
+    let currentDiagramId=null, currentUser=null, projectPanelOpen=false;
+    let autoSaveTimer=null;
+
+    // === API Client ===
+    const API={
+        async list(userId){
+            const q=userId?`?userId=${userId}`:'';
+            const r=await fetch('/api/diagrams'+q);return r.json();
+        },
+        async get(id){const r=await fetch('/api/diagrams/'+id);return r.json();},
+        async create(name,data,userId){
+            const r=await fetch('/api/diagrams',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name,data,userId})});return r.json();
+        },
+        async update(id,payload){
+            const r=await fetch('/api/diagrams/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(payload)});return r.json();
+        },
+        async remove(id){const r=await fetch('/api/diagrams/'+id,{method:'DELETE'});return r.json();},
+        async uploadImage(file){
+            const fd=new FormData();fd.append('image',file);
+            const r=await fetch('/api/images',{method:'POST',body:fd});return r.json();
+        },
+        imageUrl(id){return '/api/images/'+id;},
+        async authGoogle(credential){
+            const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({credential})});return r.json();
+        }
+    };
+
+    const canvas=document.getElementById('canvas');
+    const canvasContainer=document.getElementById('canvasContainer');
+    const svg=document.getElementById('connectionsSvg');
+    const hintOverlay=document.getElementById('hintOverlay');
+
+    const CT={
+        'browser':{icon:'\u{1F310}',title:'Browser',desc:'Web client',color:'blue',badge:'Client'},
+        'mobile':{icon:'\u{1F4F1}',title:'Mobile App',desc:'iOS / Android',color:'blue',badge:'Client'},
+        'desktop':{icon:'\u{1F5A5}\uFE0F',title:'Desktop App',desc:'Electron / Native',color:'blue',badge:'Client'},
+        'iot':{icon:'\u{1F4E1}',title:'IoT Device',desc:'Sensor / Edge',color:'blue',badge:'Client'},
+        'api-gateway':{icon:'\u{1F6AA}',title:'API Gateway',desc:'Route & throttle requests',color:'green',badge:'Gateway'},
+        'load-balancer':{icon:'\u2696\uFE0F',title:'Load Balancer',desc:'Distribute traffic',color:'green',badge:'Network'},
+        'cdn':{icon:'\u{1F30D}',title:'CDN',desc:'Edge caching',color:'green',badge:'Network'},
+        'dns':{icon:'\u{1F517}',title:'DNS',desc:'Domain resolution',color:'green',badge:'Network'},
+        'server':{icon:'\u2699\uFE0F',title:'App Server',desc:'Business logic',color:'purple',badge:'Application'},
+        'microservice':{icon:'\u{1F9E9}',title:'Microservice',desc:'Bounded context',color:'purple',badge:'Service'},
+        'serverless':{icon:'\u26A1',title:'Lambda / Function',desc:'Event-driven compute',color:'purple',badge:'Serverless'},
+        'auth':{icon:'\u{1F510}',title:'Auth Service',desc:'JWT / OAuth',color:'purple',badge:'Security'},
+        'postgres':{icon:'\u{1F418}',title:'PostgreSQL',desc:'Relational DB',color:'red',badge:'Database'},
+        'mongodb':{icon:'\u{1F343}',title:'MongoDB',desc:'Document store',color:'red',badge:'Database'},
+        'mysql':{icon:'\u{1F5C4}\uFE0F',title:'MySQL',desc:'Relational DB',color:'red',badge:'Database'},
+        's3':{icon:'\u{1F4E6}',title:'Object Storage',desc:'S3 / Blob',color:'orange',badge:'Storage'},
+        'redis':{icon:'\u{1F48E}',title:'Redis',desc:'In-memory cache',color:'cyan',badge:'Cache'},
+        'memcached':{icon:'\u{1F9CA}',title:'Memcached',desc:'Distributed cache',color:'cyan',badge:'Cache'},
+        'kafka':{icon:'\u{1F4E8}',title:'Kafka',desc:'Event streaming',color:'orange',badge:'Queue'},
+        'rabbitmq':{icon:'\u{1F430}',title:'RabbitMQ',desc:'Message broker',color:'orange',badge:'Queue'},
+        'monitoring':{icon:'\u{1F4CA}',title:'Monitoring',desc:'Prometheus / Grafana',color:'pink',badge:'Ops'},
+        'logging':{icon:'\u{1F4DD}',title:'Logging',desc:'ELK / Datadog',color:'pink',badge:'Ops'},
+        'analytics':{icon:'\u{1F4C8}',title:'Analytics',desc:'Metrics & insights',color:'yellow',badge:'Analytics'},
+        'search':{icon:'\u{1F50D}',title:'Search Engine',desc:'Elasticsearch',color:'yellow',badge:'Search'},
+    };
+    const CV={blue:'#4f8ff7',green:'#34d399',purple:'#a78bfa',orange:'#fb923c',red:'#f87171',cyan:'#22d3ee',pink:'#f472b6',yellow:'#fbbf24'};
+
+    function setTool(t){
+        currentTool=t;
+        document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById(t+'Tool').classList.add('active');
+        canvasContainer.style.cursor=t==='connect'?'crosshair':t==='note'?'cell':'default';
+    }
+
+    function updateTransform(){
+        canvas.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
+        document.getElementById('zoomLevel').textContent=Math.round(scale*100)+'%';
+        updateMinimap();
+    }
+    function zoomIn(){scale=Math.min(3,scale*1.15);updateTransform();}
+    function zoomOut(){scale=Math.max(0.15,scale/1.15);updateTransform();}
+    function resetZoom(){scale=1;panX=0;panY=0;updateTransform();}
+
+    canvasContainer.addEventListener('wheel',e=>{
+        e.preventDefault();
+        const r=canvasContainer.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+        const os=scale,d=e.deltaY>0?0.92:1.08;
+        scale=Math.max(0.15,Math.min(3,scale*d));
+        panX=mx-(mx-panX)*(scale/os);panY=my-(my-panY)*(scale/os);
+        updateTransform();
+    },{passive:false});
+
+    canvasContainer.addEventListener('mousedown',e=>{
+        if(e.button===2)return;
+        if(spacePressed||e.button===1){isPanning=true;panStartX=e.clientX-panX;panStartY=e.clientY-panY;canvasContainer.style.cursor='grabbing';e.preventDefault();return;}
+        if(currentTool==='note'&&!e.target.closest('.node')&&!e.target.closest('.sticky-note')){
+            const p=screenToCanvas(e.clientX,e.clientY);addStickyNote('yellow',p.x,p.y);return;
+        }
+        if(!e.target.closest('.node')&&!e.target.closest('.sticky-note'))deselectAll();
+    });
+
+    window.addEventListener('mousemove',e=>{
+        if(isPanning){panX=e.clientX-panStartX;panY=e.clientY-panStartY;updateTransform();return;}
+        if(isDragging&&dragNode){
+            const p=screenToCanvas(e.clientX,e.clientY);
+            dragNode.x=p.x-dragOffsetX;dragNode.y=p.y-dragOffsetY;
+            const el=document.getElementById('node-'+dragNode.id);
+            if(el){el.style.left=dragNode.x+'px';el.style.top=dragNode.y+'px';}
+            updateConnections();updateMinimap();
+        }
+        if(connectFrom&&tempLine){const p=screenToCanvas(e.clientX,e.clientY);tempLine.setAttribute('x2',p.x);tempLine.setAttribute('y2',p.y);}
+    });
+
+    window.addEventListener('mouseup',e=>{
+        if(isPanning){isPanning=false;canvasContainer.style.cursor=currentTool==='connect'?'crosshair':'default';}
+        if(isDragging){isDragging=false;if(dragNode)scheduleAutoSave();dragNode=null;}
+        if(connectFrom&&tempLine){
+            const t=e.target.closest('.node-port');
+            if(t){const nid=parseInt(t.closest('.node').id.replace('node-',''));const port=t.dataset.port;if(nid!==connectFrom.id)createConnection(connectFrom.id,connectFromPort,nid,port);}
+            if(tempLine){tempLine.remove();tempLine=null;}connectFrom=null;connectFromPort=null;
+        }
+    });
+
+    canvasContainer.addEventListener('contextmenu',e=>{
+        e.preventDefault();const p=screenToCanvas(e.clientX,e.clientY);contextMenuX=p.x;contextMenuY=p.y;
+        const m=document.getElementById('contextMenu');m.style.left=e.clientX+'px';m.style.top=e.clientY+'px';m.style.display='block';
+    });
+    document.addEventListener('click',e=>{if(!e.target.closest('.context-menu'))document.getElementById('contextMenu').style.display='none';});
+
+    document.addEventListener('keydown',e=>{
+        if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+        if(e.key==='Escape'){hideTemplateModal();return;}
+        if(e.code==='Space'){spacePressed=true;canvasContainer.style.cursor='grab';e.preventDefault();}
+        if(e.key==='v'||e.key==='V')setTool('select');
+        if(e.key==='c'&&!e.metaKey&&!e.ctrlKey)setTool('connect');
+        if(e.key==='n'||e.key==='N')setTool('note');
+        if(e.key==='Delete'||e.key==='Backspace')deleteSelected();
+        if(e.key==='i'||e.key==='I'){triggerImageUpload();return;}
+        if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();saveDiagram();}
+    });
+    document.addEventListener('keyup',e=>{if(e.code==='Space'){spacePressed=false;canvasContainer.style.cursor=currentTool==='connect'?'crosshair':'default';}});
+
+    function screenToCanvas(sx,sy){const r=canvasContainer.getBoundingClientRect();return{x:(sx-r.left-panX)/scale,y:(sy-r.top-panY)/scale};}
+
+    function createNode(type,x,y){
+        hintOverlay.style.opacity='0';setTimeout(()=>hintOverlay.style.display='none',500);
+        const t=CT[type];if(!t)return;
+        const id=++nodeIdCounter;const node={id,type,x,y,...t};nodes.push(node);renderNode(node);updateMinimap();scheduleAutoSave();return node;
+    }
+
+    function renderNode(node){
+        const d=document.createElement('div');d.className='node';d.id='node-'+node.id;d.dataset.color=node.color;
+        d.style.left=node.x+'px';d.style.top=node.y+'px';
+        d.innerHTML=`<div class="node-port top" data-port="top"></div><div class="node-port bottom" data-port="bottom"></div><div class="node-port left" data-port="left"></div><div class="node-port right" data-port="right"></div><button class="node-delete" onclick="deleteNode(${node.id})">&#x2715;</button><div class="node-header"><span class="node-icon">${node.icon}</span><input class="node-title" value="${node.title}" onchange="updateNodeTitle(${node.id},this.value)"></div><div class="node-body"><textarea class="node-desc" onchange="updateNodeDesc(${node.id},this.value)">${node.desc}</textarea><span class="node-badge">${node.badge}</span></div>`;
+        d.addEventListener('mousedown',e=>{
+            if(e.target.closest('.node-port')||e.target.closest('.node-delete')||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+            if(currentTool==='select'){isDragging=true;dragNode=node;const p=screenToCanvas(e.clientX,e.clientY);dragOffsetX=p.x-node.x;dragOffsetY=p.y-node.y;selectNode(node.id);}
+        });
+        d.querySelectorAll('.node-port').forEach(port=>{
+            port.addEventListener('mousedown',e=>{
+                e.stopPropagation();connectFrom=node;connectFromPort=port.dataset.port;
+                const pp=getPortPosition(node,port.dataset.port);
+                tempLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+                tempLine.setAttribute('x1',pp.x);tempLine.setAttribute('y1',pp.y);tempLine.setAttribute('x2',pp.x);tempLine.setAttribute('y2',pp.y);
+                tempLine.setAttribute('stroke',CV[node.color]);tempLine.setAttribute('stroke-width','2.5');tempLine.setAttribute('stroke-dasharray','6 4');
+                svg.appendChild(tempLine);
+            });
+        });
+        canvas.appendChild(d);
+    }
+
+    function updateNodeTitle(id,v){const n=nodes.find(n=>n.id===id);if(n){n.title=v;scheduleAutoSave();}}
+    function updateNodeDesc(id,v){const n=nodes.find(n=>n.id===id);if(n){n.desc=v;scheduleAutoSave();}}
+    function selectNode(id){deselectAll();selectedNode=id;const el=document.getElementById('node-'+id);if(el)el.classList.add('selected');}
+    function deselectAll(){selectedNode=null;document.querySelectorAll('.node.selected').forEach(n=>n.classList.remove('selected'));}
+    function selectAllNodes(){document.querySelectorAll('.node').forEach(n=>n.classList.add('selected'));document.getElementById('contextMenu').style.display='none';}
+    function deleteNode(id){const el=document.getElementById('node-'+id);if(el)el.remove();nodes=nodes.filter(n=>n.id!==id);connections=connections.filter(c=>c.from!==id&&c.to!==id);renderAllConnections();updateMinimap();scheduleAutoSave();}
+    function deleteSelected(){if(selectedNode){deleteNode(selectedNode);selectedNode=null;}}
+
+    function getPortPosition(node,port){
+        const el=document.getElementById('node-'+node.id);if(!el)return{x:node.x,y:node.y};
+        const w=el.offsetWidth,h=el.offsetHeight;
+        switch(port){case'top':return{x:node.x+w/2,y:node.y};case'bottom':return{x:node.x+w/2,y:node.y+h};case'left':return{x:node.x,y:node.y+h/2};case'right':return{x:node.x+w,y:node.y+h/2};}
+    }
+
+    function createConnection(fromId,fromPort,toId,toPort,label){
+        const id=++connectionIdCounter;const fn=nodes.find(n=>n.id===fromId);
+        const conn={id,from:fromId,fromPort,to:toId,toPort,color:fn?fn.color:'blue',label:label||'data'};
+        connections.push(conn);renderAllConnections();scheduleAutoSave();
+    }
+
+    function renderAllConnections(){
+        svg.querySelectorAll('.conn-group').forEach(g=>g.remove());
+        connections.forEach(conn=>{
+            const fn=nodes.find(n=>n.id===conn.from),tn=nodes.find(n=>n.id===conn.to);if(!fn||!tn)return;
+            const p1=getPortPosition(fn,conn.fromPort),p2=getPortPosition(tn,conn.toPort);
+            const color=CV[conn.color]||'#4f8ff7';
+            const g=document.createElementNS('http://www.w3.org/2000/svg','g');g.classList.add('conn-group');g.dataset.connId=conn.id;
+
+            const dx=Math.abs(p2.x-p1.x)*0.5,dy=Math.abs(p2.y-p1.y)*0.5;
+            let c1x,c1y,c2x,c2y;
+            if(conn.fromPort==='bottom'||conn.fromPort==='top'){
+                const dir=conn.fromPort==='bottom'?1:-1;c1x=p1.x;c1y=p1.y+dir*Math.max(dy,40);
+                if(conn.toPort==='left'||conn.toPort==='right'){c2x=conn.toPort==='left'?p2.x-Math.max(dx,40):p2.x+Math.max(dx,40);c2y=p2.y;}
+                else{const d2=conn.toPort==='top'?-1:1;c2x=p2.x;c2y=p2.y+d2*Math.max(dy,40);}
+            }else{
+                const dir=conn.fromPort==='right'?1:-1;c1x=p1.x+dir*Math.max(dx,40);c1y=p1.y;
+                if(conn.toPort==='top'||conn.toPort==='bottom'){c2x=p2.x;c2y=conn.toPort==='top'?p2.y-Math.max(dy,40):p2.y+Math.max(dy,40);}
+                else{const d2=conn.toPort==='left'?-1:1;c2x=p2.x+d2*Math.max(dx,40);c2y=p2.y;}
+            }
+            const pathD=`M${p1.x},${p1.y} C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`;
+
+            // Glow
+            const gp=document.createElementNS('http://www.w3.org/2000/svg','path');
+            gp.setAttribute('d',pathD);gp.setAttribute('stroke',color);gp.setAttribute('stroke-width','6');
+            gp.setAttribute('fill','none');gp.setAttribute('opacity','0.15');gp.setAttribute('filter','url(#glow)');g.appendChild(gp);
+
+            // Dashed animated
+            const dp=document.createElementNS('http://www.w3.org/2000/svg','path');
+            dp.setAttribute('d',pathD);dp.setAttribute('stroke',color);dp.setAttribute('stroke-width','2');
+            dp.setAttribute('fill','none');dp.setAttribute('opacity','0.3');dp.setAttribute('stroke-dasharray','6 4');
+            dp.style.animation='flowDash 1s linear infinite';g.appendChild(dp);
+
+            // Main path
+            const mp=document.createElementNS('http://www.w3.org/2000/svg','path');
+            mp.setAttribute('d',pathD);mp.setAttribute('class','connection-path');mp.setAttribute('stroke',color);
+            mp.setAttribute('marker-end',`url(#ah-${conn.color})`);mp.setAttribute('id','path-'+conn.id);
+            mp.style.pointerEvents='stroke';
+            mp.addEventListener('dblclick',()=>{connections=connections.filter(c=>c.id!==conn.id);renderAllConnections();});
+            g.appendChild(mp);
+
+            // Animated particles
+            for(let i=0;i<3;i++){
+                const gc=document.createElementNS('http://www.w3.org/2000/svg','circle');
+                gc.setAttribute('r','8');gc.setAttribute('fill',color);gc.setAttribute('opacity','0.15');
+                const ga=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+                ga.setAttribute('dur',(2.5+i*0.3)+'s');ga.setAttribute('repeatCount','indefinite');ga.setAttribute('begin',(i*0.8)+'s');
+                const gm=document.createElementNS('http://www.w3.org/2000/svg','mpath');
+                gm.setAttributeNS('http://www.w3.org/1999/xlink','href','#path-'+conn.id);
+                ga.appendChild(gm);gc.appendChild(ga);g.appendChild(gc);
+
+                const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+                c.setAttribute('r','4');c.setAttribute('fill',color);c.setAttribute('class','flow-particle');c.setAttribute('opacity','0.9');
+                const a=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+                a.setAttribute('dur',(2.5+i*0.3)+'s');a.setAttribute('repeatCount','indefinite');a.setAttribute('begin',(i*0.8)+'s');
+                const m=document.createElementNS('http://www.w3.org/2000/svg','mpath');
+                m.setAttributeNS('http://www.w3.org/1999/xlink','href','#path-'+conn.id);
+                a.appendChild(m);c.appendChild(a);g.appendChild(c);
+            }
+
+            // Label
+            if(conn.label){
+                const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
+                const tl=conn.label.length*7+16;
+                const lb=document.createElementNS('http://www.w3.org/2000/svg','rect');
+                lb.setAttribute('class','connection-label-bg');lb.setAttribute('x',mx-tl/2);lb.setAttribute('y',my-10);lb.setAttribute('width',tl);lb.setAttribute('height',20);
+                const lt=document.createElementNS('http://www.w3.org/2000/svg','text');
+                lt.setAttribute('class','connection-label');lt.setAttribute('x',mx);lt.setAttribute('y',my);lt.setAttribute('text-anchor','middle');lt.setAttribute('dominant-baseline','middle');
+                lt.textContent=conn.label;
+                lt.addEventListener('click',()=>{const nl=prompt('Connection label:',conn.label);if(nl!==null){conn.label=nl;renderAllConnections();}});
+                g.appendChild(lb);g.appendChild(lt);
+            }
+            svg.appendChild(g);
+        });
+    }
+    function updateConnections(){renderAllConnections();}
+
+    function addStickyNote(color,x,y){
+        document.getElementById('contextMenu').style.display='none';
+        if(x===undefined){x=contextMenuX;y=contextMenuY;}
+        const id=++noteIdCounter;const note={id,x,y,color,text:'Add your note here...'};stickyNotes.push(note);renderStickyNote(note);scheduleAutoSave();
+    }
+    function renderStickyNote(note){
+        const d=document.createElement('div');d.className='sticky-note '+note.color;d.id='note-'+note.id;
+        d.style.left=note.x+'px';d.style.top=note.y+'px';
+        d.innerHTML=`<button class="sticky-delete" onclick="deleteStickyNote(${note.id})">&#x2715;</button><textarea class="sticky-note-text" onchange="updateNoteText(${note.id},this.value)">${note.text}</textarea>`;
+        d.addEventListener('mousedown',e=>{
+            if(e.target.tagName==='TEXTAREA')return;isDragging=true;
+            const p=screenToCanvas(e.clientX,e.clientY);dragNode=note;dragOffsetX=p.x-note.x;dragOffsetY=p.y-note.y;
+            const mv=ev=>{const pp=screenToCanvas(ev.clientX,ev.clientY);note.x=pp.x-dragOffsetX;note.y=pp.y-dragOffsetY;d.style.left=note.x+'px';d.style.top=note.y+'px';};
+            const up=()=>{isDragging=false;dragNode=null;window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);};
+            window.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);
+        });
+        canvas.appendChild(d);
+    }
+    function updateNoteText(id,t){const n=stickyNotes.find(n=>n.id===id);if(n){n.text=t;scheduleAutoSave();}}
+    function deleteStickyNote(id){const el=document.getElementById('note-'+id);if(el)el.remove();stickyNotes=stickyNotes.filter(n=>n.id!==id);scheduleAutoSave();}
+
+    // Drag from sidebar
+    let dragType=null;
+    document.querySelectorAll('.component-item').forEach(item=>{
+        item.addEventListener('dragstart',e=>{dragType=item.dataset.type;e.dataTransfer.effectAllowed='copy';});
+    });
+    canvasContainer.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';});
+
+    function updateMinimap(){
+        const mm=document.getElementById('minimap'),vp=document.getElementById('minimapViewport');
+        const mmW=180,mmH=120,cW=8000;const scM=mmW/cW;
+        mm.querySelectorAll('.minimap-node').forEach(n=>n.remove());
+        nodes.forEach(n=>{const dot=document.createElement('div');dot.className='minimap-node';dot.style.left=(n.x*scM)+'px';dot.style.top=(n.y*scM)+'px';dot.style.width='4px';dot.style.height='3px';dot.style.background=CV[n.color]||'#4f8ff7';mm.appendChild(dot);});
+        const cr=canvasContainer.getBoundingClientRect();
+        vp.style.left=(-panX/scale*scM)+'px';vp.style.top=(-panY/scale*scM)+'px';
+        vp.style.width=(cr.width/scale*scM)+'px';vp.style.height=(cr.height/scale*scM)+'px';
+    }
+
+    // =============================================
+    // SAVE / LOAD / EXPORT (API-backed)
+    // =============================================
+    function getDiagramData(){
+        return {nodes,connections,stickyNotes,canvasImages,nodeIdCounter,connectionIdCounter,noteIdCounter,imageIdCounter};
+    }
+
+    async function saveDiagram(){
+        const data=getDiagramData();
+        try{
+            if(currentDiagramId){
+                await API.update(currentDiagramId,{data});
+            }else{
+                const name=prompt('Diagram name:','Untitled Diagram')||'Untitled Diagram';
+                const result=await API.create(name,data,currentUser?currentUser.id:null);
+                currentDiagramId=result._id;
+                updateDiagramNameDisplay(result.name);
+                history.replaceState(null,'','/?d='+currentDiagramId);
+            }
+            showAutoSaveStatus('Saved');
+            showToast('Saved!');
+        }catch(e){console.error('Save failed:',e);showToast('Save failed!');}
+    }
+
+    async function loadDiagram(id){
+        try{
+            const result=await API.get(id);
+            if(!result||result.error)return false;
+            clearCanvasQuiet();
+            const d=result.data||{};
+            currentDiagramId=result._id;
+            nodeIdCounter=d.nodeIdCounter||0;connectionIdCounter=d.connectionIdCounter||0;
+            noteIdCounter=d.noteIdCounter||0;imageIdCounter=d.imageIdCounter||0;
+            (d.nodes||[]).forEach(n=>{nodes.push(n);renderNode(n);});
+            (d.stickyNotes||[]).forEach(n=>{stickyNotes.push(n);renderStickyNote(n);});
+            (d.canvasImages||[]).forEach(img=>{canvasImages.push(img);renderCanvasImage(img);});
+            connections=d.connections||[];renderAllConnections();updateMinimap();
+            if(nodes.length>0||canvasImages.length>0)hintOverlay.style.display='none';
+            updateDiagramNameDisplay(result.name);
+            history.replaceState(null,'','/?d='+currentDiagramId);
+            document.getElementById('autosaveIndicator').style.display='flex';
+            return true;
+        }catch(e){console.error('Load failed:',e);return false;}
+    }
+
+    function exportPNG(){showToast('Opening print dialog for export...');window.print();}
+
+    function clearCanvas(){
+        document.getElementById('contextMenu').style.display='none';
+        if(!confirm('Clear all nodes, connections, notes, and images?'))return;
+        clearCanvasQuiet();
+        hintOverlay.style.display='flex';hintOverlay.style.opacity='1';
+        if(currentDiagramId)API.update(currentDiagramId,{data:getDiagramData()});
+    }
+
+    // =============================================
+    // AUTO-SAVE
+    // =============================================
+    function scheduleAutoSave(){
+        if(!currentDiagramId)return;
+        clearTimeout(autoSaveTimer);
+        showAutoSaveStatus('Saving...',true);
+        autoSaveTimer=setTimeout(async()=>{
+            try{
+                await API.update(currentDiagramId,{data:getDiagramData()});
+                showAutoSaveStatus('Saved');
+            }catch(e){showAutoSaveStatus('Save failed');}
+        },1500);
+    }
+
+    function showAutoSaveStatus(text,saving){
+        const ind=document.getElementById('autosaveIndicator');
+        const dot=document.getElementById('autosaveDot');
+        const txt=document.getElementById('autosaveText');
+        ind.style.display='flex';
+        txt.textContent=text;
+        if(saving)dot.classList.add('saving');else dot.classList.remove('saving');
+    }
+
+    function updateDiagramNameDisplay(name){
+        document.getElementById('diagramName').textContent=name||'Untitled Diagram';
+    }
+
+    async function renameDiagram(){
+        if(!currentDiagramId)return;
+        const current=document.getElementById('diagramName').textContent;
+        const newName=prompt('Rename diagram:',current);
+        if(newName&&newName!==current){
+            await API.update(currentDiagramId,{name:newName});
+            updateDiagramNameDisplay(newName);
+        }
+    }
+    function fitToScreen(){
+        document.getElementById('contextMenu').style.display='none';if(nodes.length===0)return;
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        nodes.forEach(n=>{minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+180);maxY=Math.max(maxY,n.y+100);});
+        const r=canvasContainer.getBoundingClientRect(),cW=maxX-minX+100,cH=maxY-minY+100;
+        scale=Math.min(r.width/cW,r.height/cH,1.5);
+        panX=(r.width-cW*scale)/2-minX*scale+50*scale;panY=(r.height-cH*scale)/2-minY*scale+50*scale;
+        updateTransform();
+    }
+    function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+    // =============================================
+    // TEMPLATE SYSTEM
+    // =============================================
+    function showTemplateModal(){document.getElementById('templateModal').classList.add('visible');}
+    function hideTemplateModal(){document.getElementById('templateModal').classList.remove('visible');}
+    document.getElementById('templateModal').addEventListener('click',e=>{if(e.target===e.currentTarget)hideTemplateModal();});
+
+    function clearCanvasQuiet(){
+        nodes.forEach(n=>{const el=document.getElementById('node-'+n.id);if(el)el.remove();});
+        stickyNotes.forEach(n=>{const el=document.getElementById('note-'+n.id);if(el)el.remove();});
+        canvasImages.forEach(i=>{const el=document.getElementById('cimg-'+i.id);if(el)el.remove();});
+        nodes=[];connections=[];stickyNotes=[];canvasImages=[];
+        nodeIdCounter=0;connectionIdCounter=0;noteIdCounter=0;imageIdCounter=0;
+        renderAllConnections();updateMinimap();
+    }
+
+    function _addNote(color,x,y,text){
+        addStickyNote(color,x,y);
+        const n=stickyNotes[stickyNotes.length-1];
+        if(n){n.text=text;const el=document.getElementById('note-'+n.id);if(el)el.querySelector('textarea').value=text;}
+    }
+
+    async function loadTemplate(name){
+        hideTemplateModal();
+        hintOverlay.style.opacity='0';setTimeout(()=>hintOverlay.style.display='none',300);
+        clearCanvasQuiet();
+
+        // Template name mapping for display
+        const templateNames={
+            'persistent-db':'Persistent Database','microservices':'Microservices',
+            'event-driven':'Event-Driven','serverless':'Serverless',
+            'cicd':'CI/CD Pipeline','data-pipeline':'Data Pipeline',
+            'basic-webapp':'Basic Web App','mind-map':'Mind Map',
+            'swimlanes':'Swimlanes','blank':'Blank Canvas',
+        };
+
+        // Create a new diagram in DB for this template
+        const diagramName=templateNames[name]||'Untitled Diagram';
+        try{
+            const result=await API.create(diagramName,{},currentUser?currentUser.id:null);
+            currentDiagramId=result._id;
+            updateDiagramNameDisplay(diagramName);
+            history.replaceState(null,'','/?d='+currentDiagramId);
+            document.getElementById('autosaveIndicator').style.display='flex';
+        }catch(e){console.error('Failed to create diagram:',e);}
+
+        if(name==='blank'){return;}
+
+        const builders={
+            'persistent-db': buildPersistentDB,
+            'microservices': buildMicroservices,
+            'event-driven': buildEventDriven,
+            'serverless': buildServerless,
+            'cicd': buildCICD,
+            'data-pipeline': buildDataPipeline,
+            'basic-webapp': buildBasicWebApp,
+            'mind-map': buildMindMap,
+            'swimlanes': buildSwimlanes,
+        };
+        if(builders[name]) builders[name]();
+    }
+
+    function _build(layout, conns, notes){
+        const cn=[];
+        layout.forEach(l=>{cn.push(createNode(l.type,l.x,l.y));});
+        setTimeout(()=>{
+            conns.forEach(([fi,fp,ti,tp,label])=>{if(cn[fi]&&cn[ti])createConnection(cn[fi].id,fp,cn[ti].id,tp,label);});
+            if(notes) notes.forEach(n=>_addNote(n[0],n[1],n[2],n[3]));
+            fitToScreen();
+        },150);
+    }
+
+    // 1. Persistent Database Architecture
+    function buildPersistentDB(){
+        _build(
+            [{type:'browser',x:500,y:100},{type:'mobile',x:750,y:100},{type:'cdn',x:250,y:100},
+             {type:'load-balancer',x:600,y:300},{type:'api-gateway',x:600,y:480},
+             {type:'auth',x:300,y:480},{type:'server',x:450,y:660},{type:'microservice',x:750,y:660},
+             {type:'redis',x:250,y:660},{type:'kafka',x:950,y:660},
+             {type:'postgres',x:450,y:870},{type:'mongodb',x:700,y:870},{type:'s3',x:950,y:870},
+             {type:'monitoring',x:100,y:870},{type:'logging',x:1150,y:660}],
+            [[0,'bottom',3,'top','HTTPS'],[1,'bottom',3,'top','HTTPS'],[2,'bottom',3,'left','Static Assets'],
+             [3,'bottom',4,'top','Route'],[4,'left',5,'right','Auth Check'],
+             [4,'bottom',6,'top','REST API'],[4,'bottom',7,'top','gRPC'],
+             [6,'left',8,'right','Cache R/W'],[7,'right',9,'left','Events'],
+             [6,'bottom',10,'top','SQL Query'],[7,'bottom',11,'top','Documents'],
+             [9,'bottom',12,'top','Files'],[8,'bottom',13,'top','Metrics'],[9,'right',14,'left','Logs']],
+            [['yellow',70,100,'Persistent Database Architecture\n\nAll data flows through the API Gateway.\nPostgreSQL for structured data.\nMongoDB for documents.\nS3 for file storage.'],
+             ['blue',1100,100,'Data Flow\n\n1. Client > Load Balancer\n2. LB > API Gateway\n3. Gateway > Services\n4. Services > Databases\n5. Kafka for async events']]
+        );
+    }
+
+    // 2. Microservices
+    function buildMicroservices(){
+        _build(
+            [{type:'browser',x:550,y:80},{type:'mobile',x:800,y:80},
+             {type:'load-balancer',x:650,y:260},{type:'api-gateway',x:650,y:440},
+             {type:'auth',x:300,y:440},
+             {type:'microservice',x:250,y:650},{type:'microservice',x:500,y:650},
+             {type:'microservice',x:750,y:650},{type:'microservice',x:1000,y:650},
+             {type:'kafka',x:600,y:850},
+             {type:'postgres',x:200,y:880},{type:'mongodb',x:450,y:880},
+             {type:'mysql',x:700,y:880},{type:'redis',x:1000,y:880},
+             {type:'monitoring',x:1200,y:440},{type:'logging',x:1200,y:650}],
+            [[0,'bottom',2,'top','HTTPS'],[1,'bottom',2,'top','HTTPS'],
+             [2,'bottom',3,'top','Route'],[3,'left',4,'right','Verify JWT'],
+             [3,'bottom',5,'top','Users API'],[3,'bottom',6,'top','Orders API'],
+             [3,'bottom',7,'top','Products API'],[3,'bottom',8,'top','Payments API'],
+             [5,'bottom',10,'top','SQL'],[6,'bottom',11,'top','Documents'],
+             [7,'bottom',12,'top','SQL'],[8,'right',13,'left','Session'],
+             [5,'bottom',9,'top','Events'],[6,'bottom',9,'top','Events'],
+             [7,'bottom',9,'top','Events'],[3,'right',14,'left','Metrics'],
+             [9,'right',15,'left','Logs']],
+            [['yellow',60,80,'Microservices Architecture\n\nEach service owns its database.\nKafka for inter-service events.\nAPI Gateway handles routing.'],
+             ['green',60,650,'Services\n\nUser Service > PostgreSQL\nOrder Service > MongoDB\nProduct Service > MySQL\nPayment Service > Redis cache']]
+        );
+    }
+
+    // 3. Event-Driven
+    function buildEventDriven(){
+        _build(
+            [{type:'browser',x:150,y:100},{type:'mobile',x:400,y:100},{type:'iot',x:650,y:100},
+             {type:'api-gateway',x:350,y:300},
+             {type:'kafka',x:350,y:500},{type:'kafka',x:650,y:500},
+             {type:'microservice',x:100,y:700},{type:'microservice',x:350,y:700},
+             {type:'microservice',x:600,y:700},{type:'serverless',x:850,y:700},
+             {type:'postgres',x:100,y:920},{type:'mongodb',x:350,y:920},
+             {type:'s3',x:600,y:920},{type:'analytics',x:850,y:920},
+             {type:'monitoring',x:900,y:300}],
+            [[0,'bottom',3,'top','Events'],[1,'bottom',3,'top','Events'],[2,'bottom',5,'top','Telemetry'],
+             [3,'bottom',4,'top','Publish'],
+             [4,'bottom',6,'top','Consume'],[4,'bottom',7,'top','Consume'],
+             [5,'bottom',8,'top','Consume'],[5,'bottom',9,'top','Trigger'],
+             [6,'bottom',10,'top','Write'],[7,'bottom',11,'top','Store'],
+             [8,'bottom',12,'top','Archive'],[9,'bottom',13,'top','Analyze'],
+             [3,'right',14,'left','Health']],
+            [['yellow',60,300,'Event-Driven Architecture\n\nProducers publish events to Kafka topics.\nConsumers process events independently.\nFully decoupled & scalable.'],
+             ['blue',900,100,'Event Flow\n\n1. Producers emit events\n2. Kafka buffers & routes\n3. Consumers process async\n4. Results persisted to DBs']]
+        );
+    }
+
+    // 4. Serverless
+    function buildServerless(){
+        _build(
+            [{type:'browser',x:500,y:80},{type:'mobile',x:750,y:80},
+             {type:'cdn',x:300,y:80},{type:'dns',x:100,y:80},
+             {type:'api-gateway',x:580,y:300},
+             {type:'auth',x:300,y:300},
+             {type:'serverless',x:350,y:500},{type:'serverless',x:580,y:500},
+             {type:'serverless',x:810,y:500},
+             {type:'mongodb',x:350,y:720},{type:'s3',x:580,y:720},
+             {type:'redis',x:810,y:720},
+             {type:'kafka',x:580,y:920},
+             {type:'analytics',x:350,y:920},{type:'monitoring',x:810,y:920}],
+            [[3,'right',2,'left','Resolve'],[2,'right',0,'left','CDN Cache'],
+             [0,'bottom',4,'top','API Call'],[1,'bottom',4,'top','API Call'],
+             [4,'left',5,'right','Authorize'],
+             [4,'bottom',6,'top','GET /users'],[4,'bottom',7,'top','POST /data'],
+             [4,'bottom',8,'top','GET /files'],
+             [6,'bottom',9,'top','Query'],[7,'bottom',10,'top','Upload'],
+             [8,'bottom',11,'top','Cache Check'],
+             [6,'bottom',12,'top','Events'],[7,'bottom',12,'top','Events'],
+             [12,'left',13,'top','Metrics'],[12,'right',14,'top','Alerts']],
+            [['yellow',60,80,'Serverless Architecture\n\nNo servers to manage.\nAuto-scaling Lambda functions.\nPay per invocation.'],
+             ['green',950,300,'Benefits\n\nZero infrastructure management\nAutomatic scaling\nPay-per-use pricing\nFast deployment']]
+        );
+    }
+
+    // 5. CI/CD Pipeline
+    function buildCICD(){
+        _build(
+            [{type:'logging',x:100,y:400},{type:'server',x:350,y:400},
+             {type:'search',x:600,y:400},{type:'serverless',x:850,y:400},
+             {type:'monitoring',x:1100,y:400},
+             {type:'redis',x:100,y:600},{type:'s3',x:350,y:600},
+             {type:'postgres',x:600,y:600},
+             {type:'analytics',x:850,y:600},{type:'logging',x:1100,y:600}],
+            [[0,'right',1,'left','Push Code'],[1,'right',2,'left','Run Tests'],
+             [2,'right',3,'left','Build Artifact'],[3,'right',4,'left','Deploy'],
+             [0,'bottom',5,'top','Config'],[1,'bottom',6,'top','Artifacts'],
+             [2,'bottom',7,'top','Test Results'],
+             [3,'bottom',8,'top','Metrics'],[4,'bottom',9,'top','Alerts']],
+            [['yellow',100,200,'CI/CD Pipeline\n\nAutomated build, test, and deploy.\nEvery push triggers the pipeline.\nFast feedback loops.'],
+             ['blue',700,200,'Pipeline Stages\n\n1. Git Push > Trigger\n2. Build > Compile & Lint\n3. Test > Unit + Integration\n4. Package > Docker/Artifact\n5. Deploy > Staging > Prod']]
+        );
+    }
+
+    // 6. Data Pipeline
+    function buildDataPipeline(){
+        _build(
+            [{type:'iot',x:100,y:300},{type:'browser',x:100,y:500},{type:'mobile',x:100,y:700},
+             {type:'kafka',x:400,y:500},
+             {type:'server',x:650,y:350},{type:'serverless',x:650,y:650},
+             {type:'s3',x:900,y:500},
+             {type:'postgres',x:1150,y:350},{type:'mongodb',x:1150,y:650},
+             {type:'analytics',x:1400,y:500},{type:'monitoring',x:1400,y:300}],
+            [[0,'right',3,'left','Stream'],[1,'right',3,'left','Events'],[2,'right',3,'left','Logs'],
+             [3,'right',4,'left','Batch Process'],[3,'right',5,'left','Real-time'],
+             [4,'right',6,'top','Transform'],[5,'right',6,'bottom','Stage'],
+             [6,'right',7,'left','Structured'],[6,'right',8,'left','Unstructured'],
+             [7,'right',9,'left','Dashboard'],[8,'right',9,'left','Reports'],
+             [9,'top',10,'bottom','Alerts']],
+            [['yellow',100,100,'Data Pipeline\n\nIngest from multiple sources.\nStream + batch processing.\nData lake for storage.\nAnalytics dashboard.'],
+             ['green',1350,100,'Data Flow\n\nSources > Kafka > Process\nProcess > Data Lake\nLake > Warehouse\nWarehouse > Dashboard']]
+        );
+    }
+
+    // 7. Basic Web App
+    function buildBasicWebApp(){
+        _build(
+            [{type:'browser',x:500,y:100},{type:'cdn',x:250,y:100},
+             {type:'dns',x:250,y:300},
+             {type:'load-balancer',x:500,y:300},
+             {type:'server',x:400,y:500},{type:'server',x:700,y:500},
+             {type:'redis',x:250,y:700},
+             {type:'postgres',x:550,y:700},
+             {type:'s3',x:850,y:700}],
+            [[0,'bottom',3,'top','HTTPS'],[1,'bottom',2,'top','Resolve'],
+             [2,'right',3,'left','Route'],
+             [3,'bottom',4,'top','App 1'],[3,'bottom',5,'top','App 2'],
+             [4,'bottom',6,'left','Session'],[4,'bottom',7,'top','Queries'],
+             [5,'bottom',7,'top','Queries'],[5,'bottom',8,'top','Uploads']],
+            [['yellow',60,100,'Basic Web App\n\nSimple 3-tier architecture.\nLoad balanced app servers.\nPostgreSQL + Redis + S3.'],
+             ['blue',850,100,'Layers\n\n1. Client (Browser + CDN)\n2. Network (DNS + LB)\n3. Application (2x servers)\n4. Data (DB + Cache + Storage)']]
+        );
+    }
+
+    // 8. Mind Map
+    function buildMindMap(){
+        clearCanvasQuiet();
+        hintOverlay.style.opacity='0';setTimeout(()=>hintOverlay.style.display='none',300);
+
+        // Central idea
+        const center=createNode('server',600,450);
+
+        // Level 1 branches (4 directions)
+        const b1=createNode('microservice',300,200);
+        const b2=createNode('microservice',900,200);
+        const b3=createNode('microservice',300,700);
+        const b4=createNode('microservice',900,700);
+
+        // Level 2 sub-branches
+        const s1a=createNode('serverless',50,100);
+        const s1b=createNode('serverless',50,320);
+        const s2a=createNode('serverless',1150,100);
+        const s2b=createNode('serverless',1150,320);
+        const s3a=createNode('serverless',50,600);
+        const s3b=createNode('serverless',50,820);
+        const s4a=createNode('serverless',1150,600);
+        const s4b=createNode('serverless',1150,820);
+
+        setTimeout(()=>{
+            createConnection(center.id,'top',b1.id,'bottom','Branch 1');
+            createConnection(center.id,'top',b2.id,'bottom','Branch 2');
+            createConnection(center.id,'bottom',b3.id,'top','Branch 3');
+            createConnection(center.id,'bottom',b4.id,'top','Branch 4');
+            createConnection(b1.id,'left',s1a.id,'right','Sub-idea');
+            createConnection(b1.id,'left',s1b.id,'right','Sub-idea');
+            createConnection(b2.id,'right',s2a.id,'left','Sub-idea');
+            createConnection(b2.id,'right',s2b.id,'left','Sub-idea');
+            createConnection(b3.id,'left',s3a.id,'right','Sub-idea');
+            createConnection(b3.id,'left',s3b.id,'right','Sub-idea');
+            createConnection(b4.id,'right',s4a.id,'left','Sub-idea');
+            createConnection(b4.id,'right',s4b.id,'left','Sub-idea');
+
+            _addNote('yellow',520,350,'CENTRAL IDEA\n\nDouble-click any node title\nto rename it.\nThis is your main topic.');
+            _addNote('pink',50,450,'Tips\n\nDrag nodes to rearrange.\nPress C to add connections.\nPress N for more notes.');
+            fitToScreen();
+        },150);
+    }
+
+    // 9. Swimlanes
+    function buildSwimlanes(){
+        clearCanvasQuiet();
+        hintOverlay.style.opacity='0';setTimeout(()=>hintOverlay.style.display='none',300);
+
+        // Lane headers (sticky notes as lane markers)
+        _addNote('blue',50,100,'FRONTEND TEAM\n\nUI Components\nUser Interactions\nClient-side Logic');
+        _addNote('green',50,350,'BACKEND TEAM\n\nAPI Endpoints\nBusiness Logic\nData Processing');
+        _addNote('pink',50,600,'DEVOPS TEAM\n\nCI/CD\nInfrastructure\nMonitoring');
+        _addNote('yellow',50,850,'QA TEAM\n\nTest Plans\nAutomation\nBug Reports');
+
+        // Frontend lane nodes
+        const f1=createNode('browser',350,100);
+        const f2=createNode('cdn',600,100);
+        const f3=createNode('dns',850,100);
+
+        // Backend lane nodes
+        const b1=createNode('api-gateway',350,350);
+        const b2=createNode('server',600,350);
+        const b3=createNode('postgres',850,350);
+        const b4=createNode('redis',1100,350);
+
+        // DevOps lane nodes
+        const d1=createNode('logging',350,600);
+        const d2=createNode('server',600,600);
+        const d3=createNode('s3',850,600);
+        const d4=createNode('monitoring',1100,600);
+
+        // QA lane nodes
+        const q1=createNode('search',350,850);
+        const q2=createNode('analytics',600,850);
+        const q3=createNode('logging',850,850);
+
+        setTimeout(()=>{
+            // Frontend flow
+            createConnection(f1.id,'right',f2.id,'left','Build');
+            createConnection(f2.id,'right',f3.id,'left','Deploy');
+            // Backend flow
+            createConnection(b1.id,'right',b2.id,'left','Process');
+            createConnection(b2.id,'right',b3.id,'left','Persist');
+            createConnection(b2.id,'right',b4.id,'left','Cache');
+            // DevOps flow
+            createConnection(d1.id,'right',d2.id,'left','Build');
+            createConnection(d2.id,'right',d3.id,'left','Artifact');
+            createConnection(d3.id,'right',d4.id,'left','Monitor');
+            // QA flow
+            createConnection(q1.id,'right',q2.id,'left','Analyze');
+            createConnection(q2.id,'right',q3.id,'left','Report');
+            // Cross-lane connections
+            createConnection(f3.id,'bottom',b1.id,'top','API Call');
+            createConnection(b2.id,'bottom',d2.id,'top','Deploy');
+            createConnection(d4.id,'bottom',q1.id,'top','Alerts');
+
+            _addNote('yellow',1200,100,'Swimlane Process Flow\n\nEach row = one team.\nHorizontal = process steps.\nVertical = handoffs between teams.');
+            fitToScreen();
+        },150);
+    }
+
+    // =============================================
+    // CANVAS IMAGES
+    // =============================================
+    function triggerImageUpload(){document.getElementById('imageFileInput').click();}
+
+    async function handleImageFileSelect(e){
+        const file=e.target.files[0];if(!file)return;
+        await uploadAndPlaceImage(file);
+        e.target.value='';
+    }
+
+    async function uploadAndPlaceImage(file,x,y){
+        try{
+            showToast('Uploading image...');
+            const result=await API.uploadImage(file);
+            if(result.error){showToast('Upload failed!');return;}
+            const img={
+                id:++imageIdCounter,
+                imageId:result.imageId,
+                x:x||400,y:y||300,
+                width:300,height:200,
+            };
+            canvasImages.push(img);
+            renderCanvasImage(img);
+            scheduleAutoSave();
+            showToast('Image added!');
+        }catch(e){console.error(e);showToast('Upload failed!');}
+    }
+
+    function renderCanvasImage(img){
+        const d=document.createElement('div');
+        d.className='canvas-image';d.id='cimg-'+img.id;
+        d.style.left=img.x+'px';d.style.top=img.y+'px';
+        d.style.width=img.width+'px';d.style.height=img.height+'px';
+        d.innerHTML=`<button class="canvas-image-delete" onclick="deleteCanvasImage(${img.id})">&#x2715;</button><img src="${API.imageUrl(img.imageId)}" alt=""><div class="canvas-image-resize"></div>`;
+
+        // Drag
+        d.addEventListener('mousedown',e=>{
+            if(e.target.closest('.canvas-image-delete')||e.target.closest('.canvas-image-resize'))return;
+            isDragging=true;
+            const p=screenToCanvas(e.clientX,e.clientY);
+            dragNode=img;dragOffsetX=p.x-img.x;dragOffsetY=p.y-img.y;
+            const mv=ev=>{const pp=screenToCanvas(ev.clientX,ev.clientY);img.x=pp.x-dragOffsetX;img.y=pp.y-dragOffsetY;d.style.left=img.x+'px';d.style.top=img.y+'px';};
+            const up=()=>{isDragging=false;dragNode=null;scheduleAutoSave();window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);};
+            window.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);
+        });
+
+        // Resize
+        const rh=d.querySelector('.canvas-image-resize');
+        rh.addEventListener('mousedown',e=>{
+            e.stopPropagation();e.preventDefault();
+            const startW=img.width,startH=img.height,startX=e.clientX,startY=e.clientY;
+            const mv=ev=>{
+                const dxr=(ev.clientX-startX)/scale,dyr=(ev.clientY-startY)/scale;
+                img.width=Math.max(80,startW+dxr);img.height=Math.max(60,startH+dyr);
+                d.style.width=img.width+'px';d.style.height=img.height+'px';
+            };
+            const up=()=>{scheduleAutoSave();window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);};
+            window.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);
+        });
+
+        canvas.appendChild(d);
+    }
+
+    function deleteCanvasImage(id){
+        const el=document.getElementById('cimg-'+id);if(el)el.remove();
+        canvasImages=canvasImages.filter(i=>i.id!==id);
+        scheduleAutoSave();
+    }
+
+    // Paste image from clipboard
+    document.addEventListener('paste',async e=>{
+        const items=e.clipboardData?.items;if(!items)return;
+        for(const item of items){
+            if(item.type.startsWith('image/')){
+                e.preventDefault();
+                const file=item.getAsFile();if(!file)return;
+                const center=screenToCanvas(window.innerWidth/2,window.innerHeight/2);
+                await uploadAndPlaceImage(file,center.x-150,center.y-100);
+                return;
+            }
+        }
+    });
+
+    // Unified drop handler: image files + component drag from sidebar
+    canvasContainer.addEventListener('drop',async e=>{
+        e.preventDefault();
+        // Check if it's an image file drop
+        if(e.dataTransfer.files&&e.dataTransfer.files.length>0){
+            const file=e.dataTransfer.files[0];
+            if(file.type.startsWith('image/')){
+                const p=screenToCanvas(e.clientX,e.clientY);
+                await uploadAndPlaceImage(file,p.x-150,p.y-100);
+                return;
+            }
+        }
+        // Component drag from sidebar
+        if(dragType){const p=screenToCanvas(e.clientX,e.clientY);createNode(dragType,p.x-85,p.y-40);dragType=null;}
+    });
+
+    // =============================================
+    // GOOGLE AUTH
+    // =============================================
+    let googleClientId=null;
+
+    async function fetchGoogleClientId(){
+        try{
+            const r=await fetch('/api/config');
+            const c=await r.json();
+            googleClientId=c.googleClientId||null;
+        }catch(e){console.error('Config fetch failed:',e);}
+    }
+
+    function startGoogleSignIn(){
+        if(!googleClientId||googleClientId==='your-google-client-id-here'){
+            showToast('Google Client ID not configured. Set GOOGLE_CLIENT_ID in .env');
+            return;
+        }
+        google.accounts.id.initialize({client_id:googleClientId,callback:handleGoogleCredential});
+        google.accounts.id.prompt();
+    }
+
+    async function handleGoogleCredential(response){
+        try{
+            const result=await API.authGoogle(response.credential);
+            if(result.user){
+                currentUser=result.user;
+                localStorage.setItem('archflow-user',JSON.stringify(currentUser));
+                updateAuthUI();
+                refreshProjectList();
+                showToast('Signed in as '+currentUser.name);
+            }
+        }catch(e){console.error('Auth failed:',e);showToast('Sign-in failed');}
+    }
+
+    function updateAuthUI(){
+        const area=document.getElementById('authArea');
+        if(currentUser){
+            area.innerHTML=`<img class="user-avatar" src="${currentUser.picture||''}" alt="${currentUser.name}" onclick="toggleUserMenu()" referrerpolicy="no-referrer">`;
+            document.getElementById('userMenuName').textContent=currentUser.name;
+            document.getElementById('userMenuEmail').textContent=currentUser.email;
+        }else{
+            area.innerHTML=`<button class="auth-btn" onclick="startGoogleSignIn()"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in</button>`;
+        }
+    }
+
+    function toggleUserMenu(){
+        document.getElementById('userMenu').classList.toggle('show');
+    }
+
+    function signOut(){
+        currentUser=null;
+        localStorage.removeItem('archflow-user');
+        document.getElementById('userMenu').classList.remove('show');
+        updateAuthUI();
+        showToast('Signed out');
+    }
+
+    // Close user menu on outside click
+    document.addEventListener('click',e=>{
+        if(!e.target.closest('.user-avatar')&&!e.target.closest('.user-menu')){
+            document.getElementById('userMenu').classList.remove('show');
+        }
+    });
+
+    // =============================================
+    // PROJECT MANAGEMENT
+    // =============================================
+    function toggleProjectPanel(){
+        projectPanelOpen=!projectPanelOpen;
+        document.getElementById('projectPanel').classList.toggle('open',projectPanelOpen);
+        if(projectPanelOpen)refreshProjectList();
+    }
+
+    async function refreshProjectList(){
+        try{
+            const userId=currentUser?currentUser.id:null;
+            const diagrams=await API.list(userId);
+            const list=document.getElementById('projectList');
+            if(diagrams.length===0){
+                list.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px">No diagrams yet.<br>Create one to get started!</div>';
+                return;
+            }
+            list.innerHTML=diagrams.map(d=>`
+                <div class="project-item ${d._id===currentDiagramId?'active':''}" onclick="switchDiagram('${d._id}')">
+                    <div>
+                        <div class="project-item-name">${d.name||'Untitled'}</div>
+                        <div class="project-item-date">${new Date(d.updatedAt).toLocaleDateString()}</div>
+                    </div>
+                    <button class="project-item-del" onclick="event.stopPropagation();deleteDiagram('${d._id}')">&#x2715;</button>
+                </div>
+            `).join('');
+        }catch(e){console.error(e);}
+    }
+
+    async function switchDiagram(id){
+        await loadDiagram(id);
+        fitToScreen();
+        if(projectPanelOpen)toggleProjectPanel();
+    }
+
+    async function newDiagram(){
+        currentDiagramId=null;
+        clearCanvasQuiet();
+        hintOverlay.style.display='flex';hintOverlay.style.opacity='1';
+        updateDiagramNameDisplay('Untitled Diagram');
+        history.replaceState(null,'','/');
+        document.getElementById('autosaveIndicator').style.display='none';
+        if(projectPanelOpen)toggleProjectPanel();
+        showTemplateModal();
+    }
+
+    async function deleteDiagram(id){
+        if(!confirm('Delete this diagram permanently?'))return;
+        await API.remove(id);
+        if(id===currentDiagramId)await newDiagram();
+        refreshProjectList();
+        showToast('Diagram deleted');
+    }
+
+    // =============================================
+    // INIT
+    // =============================================
+    (async function init(){
+        // Load Google Client ID from server config
+        await fetchGoogleClientId();
+
+        // Restore user session
+        try{
+            const savedUser=localStorage.getItem('archflow-user');
+            if(savedUser){currentUser=JSON.parse(savedUser);updateAuthUI();}
+        }catch(e){}
+
+        // One-time localStorage migration
+        const oldData=localStorage.getItem('archflow-data');
+        if(oldData&&!localStorage.getItem('archflow-migrated')){
+            try{
+                const data=JSON.parse(oldData);
+                const result=await API.create('Migrated Diagram',data,currentUser?currentUser.id:null);
+                currentDiagramId=result._id;
+                localStorage.removeItem('archflow-data');
+                localStorage.setItem('archflow-migrated','true');
+                await loadDiagram(result._id);
+                showToast('Migrated your diagram to the server!');
+                updateTransform();
+                return;
+            }catch(e){console.error('Migration failed:',e);}
+        }
+
+        // Check URL for diagram ID
+        const params=new URLSearchParams(window.location.search);
+        const diagramId=params.get('d');
+
+        if(diagramId){
+            const loaded=await loadDiagram(diagramId);
+            if(loaded){fitToScreen();updateTransform();return;}
+        }
+
+        // Try loading most recent diagram
+        try{
+            const userId=currentUser?currentUser.id:null;
+            const diagrams=await API.list(userId);
+            if(diagrams.length>0){
+                await loadDiagram(diagrams[0]._id);
+                fitToScreen();
+                updateTransform();
+                return;
+            }
+        }catch(e){console.error(e);}
+
+        // No diagrams — show template picker
+        showTemplateModal();
+        updateTransform();
+    })();
+    </script>
+</body>
+</html>
