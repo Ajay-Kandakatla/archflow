@@ -1,0 +1,123 @@
+import type { DiagramData, DiagramMeta, User } from '@/types';
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+function authHeaders(json = true): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (json) h['Content-Type'] = 'application/json';
+  if (authToken) h['Authorization'] = 'Bearer ' + authToken;
+  return h;
+}
+
+async function authFetch(url: string, opts: RequestInit = {}): Promise<Response> {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    // Clear auth state
+    localStorage.removeItem('archflow-user');
+    localStorage.removeItem('archflow-token');
+    window.location.reload();
+    throw new Error('Unauthorized');
+  }
+  return r;
+}
+
+export const API = {
+  async list(): Promise<DiagramMeta[]> {
+    const r = await authFetch('/api/diagrams', { headers: authHeaders() });
+    return r.json();
+  },
+
+  async get(id: string): Promise<DiagramMeta> {
+    const r = await authFetch('/api/diagrams/' + id, { headers: authHeaders() });
+    return r.json();
+  },
+
+  async create(name: string, data: Partial<DiagramData>): Promise<DiagramMeta> {
+    const r = await authFetch('/api/diagrams', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, data }),
+    });
+    return r.json();
+  },
+
+  async update(id: string, payload: { name?: string; data?: DiagramData }): Promise<DiagramMeta> {
+    const r = await authFetch('/api/diagrams/' + id, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  },
+
+  async remove(id: string): Promise<{ ok: boolean }> {
+    const r = await authFetch('/api/diagrams/' + id, { method: 'DELETE', headers: authHeaders() });
+    return r.json();
+  },
+
+  async uploadImage(file: File): Promise<{ imageId: string; filename: string; size: number } | { error: string }> {
+    const fd = new FormData();
+    fd.append('image', file);
+    const r = await authFetch('/api/images', {
+      method: 'POST',
+      headers: authToken ? { Authorization: 'Bearer ' + authToken } : {},
+      body: fd,
+    });
+    return r.json();
+  },
+
+  imageUrl(id: string): string {
+    return '/api/images/' + id;
+  },
+
+  async authGoogle(credential: string): Promise<{ user: User; token: string }> {
+    const r = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+    return r.json();
+  },
+
+  async getConfig(): Promise<{ googleClientId: string }> {
+    const r = await fetch('/api/config');
+    return r.json();
+  },
+
+  async generateDiagram(prompt: string): Promise<any> {
+    const r = await authFetch('/api/ai/generate', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ prompt }),
+    });
+    return r.json();
+  },
+
+  async getAdminNotifications(since?: string): Promise<{
+    newSignupCount: number;
+    notifications: Array<{
+      type: 'new_signup' | 'returning_login';
+      user: { name: string; email: string; picture: string | null };
+      time: string;
+      message: string;
+    }>;
+  }> {
+    const url = since ? `/api/admin/notifications?since=${encodeURIComponent(since)}` : '/api/admin/notifications';
+    const r = await authFetch(url, { headers: authHeaders() });
+    return r.json();
+  },
+
+  async getAdminUsers(): Promise<any[]> {
+    const r = await authFetch('/api/admin/users', { headers: authHeaders() });
+    return r.json();
+  },
+
+  async getAdminStats(): Promise<{ totalUsers: number; totalDiagrams: number }> {
+    const r = await authFetch('/api/admin/stats', { headers: authHeaders() });
+    return r.json();
+  },
+};

@@ -5,6 +5,7 @@ const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { Readable } = require('stream');
+const nodemailer = require('nodemailer');
 const { connect, getDiagrams, getUsers, getImageBucket, toObjectId, ObjectId } = require('./db');
 
 const app = express();
@@ -13,8 +14,72 @@ const JWT_SECRET = process.env.JWT_SECRET || 'archflow-dev-secret-change-in-prod
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'Ajaykandakatla@gmail.com').toLowerCase();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+// =============================================
+// Email notification (for admin alerts)
+// =============================================
+let emailTransporter = null;
+
+function initEmailTransporter() {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT || 587;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpFrom = process.env.SMTP_FROM || smtpUser;
+
+  if (smtpHost && smtpUser && smtpPass) {
+    emailTransporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(smtpPort),
+      secure: parseInt(smtpPort) === 465,
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+    console.log('  Email notifications enabled via', smtpHost);
+  } else {
+    console.log('  Email notifications disabled (set SMTP_HOST, SMTP_USER, SMTP_PASS to enable)');
+  }
+}
+
+async function sendAdminNewUserEmail(user) {
+  if (!emailTransporter) return;
+  const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
+  try {
+    await emailTransporter.sendMail({
+      from: `"ArchFlow" <${smtpFrom}>`,
+      to: ADMIN_EMAIL,
+      subject: `🆕 New ArchFlow User: ${user.name}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+          <div style="background: linear-gradient(135deg, #6b9fdb, #9b8acc); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+            <h2 style="color: white; margin: 0; font-size: 18px;">🎉 New User Sign-Up</h2>
+          </div>
+          <div style="background: #f8f9fb; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">Name</td><td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${user.name}</td></tr>
+              <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">Email</td><td style="padding: 8px 0; font-weight: 600; color: #0f172a;">${user.email}</td></tr>
+              <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">Time</td><td style="padding: 8px 0; color: #0f172a;">${new Date().toLocaleString()}</td></tr>
+            </table>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">This is an automated notification from ArchFlow.</p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('Admin notified about new user:', user.email);
+  } catch (e) {
+    console.error('Failed to send admin email:', e.message);
+  }
+}
+
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve Vite build output in production, fallback to public/ for legacy
+const fs = require('fs');
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+} else {
+  app.use(express.static(path.join(__dirname, 'public')));
+}
 
 // =============================================
 // Auth Middleware
@@ -73,6 +138,10 @@ app.post('/api/auth/google', async (req, res) => {
       picture: payload.picture || null,
     };
 
+    // Check if this is a first-time user
+    const existingUser = await getUsers().findOne({ _id: payload.sub });
+    const isNewUser = !existingUser;
+
     // Upsert user in DB
     await getUsers().updateOne(
       { _id: payload.sub },
@@ -87,6 +156,11 @@ app.post('/api/auth/google', async (req, res) => {
       },
       { upsert: true }
     );
+
+    // If new user, send admin notification email (async, don't block response)
+    if (isNewUser) {
+      sendAdminNewUserEmail(user).catch(() => {});
+    }
 
     // Sign a server token
     const token = jwt.sign(
@@ -294,11 +368,74 @@ app.get('/api/admin/stats', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Recent new signups & login activity (for admin notifications)
+app.get('/api/admin/notifications', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const sinceParam = req.query.since;
+    const since = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // default: last 7 days
+
+    // New users who signed up since the given date
+    const newUsers = await getUsers()
+      .find({ createdAt: { $gte: since } })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Recent login activity (users who logged in since the given date, excluding brand new signups counted above)
+    const recentLogins = await getUsers()
+      .find({
+        lastLoginAt: { $gte: since },
+        createdAt: { $lt: since },
+      })
+      .sort({ lastLoginAt: -1 })
+      .limit(20)
+      .toArray();
+
+    const notifications = [];
+
+    // Add new signup notifications
+    newUsers.forEach(u => {
+      notifications.push({
+        type: 'new_signup',
+        user: { name: u.name, email: u.email, picture: u.picture },
+        time: u.createdAt,
+        message: `${u.name} (${u.email}) signed up for the first time`,
+      });
+    });
+
+    // Add returning user login notifications
+    recentLogins.forEach(u => {
+      notifications.push({
+        type: 'returning_login',
+        user: { name: u.name, email: u.email, picture: u.picture },
+        time: u.lastLoginAt,
+        message: `${u.name} logged in`,
+      });
+    });
+
+    // Sort all notifications by time (newest first)
+    notifications.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    res.json({
+      newSignupCount: newUsers.length,
+      notifications: notifications.slice(0, 50),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
 // =============================================
 // SPA fallback
 // =============================================
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // Serve from dist/ (Vite build) if it exists, otherwise public/
+  const distIndex = path.join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(distIndex)) {
+    res.sendFile(distIndex);
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
 });
 
 // =============================================
@@ -307,8 +444,9 @@ app.get('*', (req, res) => {
 async function start() {
   try {
     await connect();
+    initEmailTransporter();
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n  ArchFlow running at http://0.0.0.0:${PORT}\n`);
+      console.log(`  ArchFlow running at http://0.0.0.0:${PORT}\n`);
     });
   } catch (e) {
     console.error('Failed to start:', e.message);
