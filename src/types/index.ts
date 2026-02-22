@@ -2,10 +2,19 @@
 // Core Data Types
 // ============================================
 
+export type TextAlign = 'left' | 'center' | 'right';
+export type ListStyle = 'none' | 'bullet' | 'numbered';
+
 export interface TextFormatting {
   fontSize?: number;   // in px, default 13
   bold?: boolean;
   italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
+  textAlign?: TextAlign;
+  listStyle?: ListStyle;
+  lineHeight?: number;  // multiplier, e.g. 1.0, 1.5, 2.0
+  textColor?: string;   // NodeColor key for text color override
 }
 
 export interface DiagramNode {
@@ -13,6 +22,8 @@ export interface DiagramNode {
   type: string;
   x: number;
   y: number;
+  width?: number;   // user-set width (undefined = auto-size, min 170)
+  height?: number;  // user-set height (undefined = auto-size, min 90)
   icon: string;
   title: string;
   desc: string;
@@ -23,6 +34,11 @@ export interface DiagramNode {
 }
 
 export type ConnectionEndpointType = 'node' | 'note';
+
+export interface Waypoint {
+  x: number;
+  y: number;
+}
 
 export interface Connection {
   id: number;
@@ -36,7 +52,10 @@ export interface Connection {
   label: string;
   direction: ConnectionDirection;
   routing: ConnectionRouting;
-  midOffset?: number; // user-adjustable offset for orthogonal routing bend point
+  waypoints?: Waypoint[]; // ordered list of user-placed intermediate points
+  midOffset?: number; // legacy: single offset for orthogonal routing bend point
+  bezierOffset?: { dx: number; dy: number }; // legacy: single offset for bezier/straight midpoint
+  labelOffset?: { dx: number; dy: number }; // user-adjustable offset for label position
 }
 
 export interface StickyNote {

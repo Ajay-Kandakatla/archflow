@@ -70,15 +70,47 @@ async function sendAdminNewUserEmail(user) {
   }
 }
 
+async function sendShareInviteEmail(toEmail, role, shareUrl, ownerName, diagramName) {
+  if (!emailTransporter) {
+    console.log(`Share invite email skipped (SMTP not configured): ${toEmail}`);
+    return;
+  }
+  const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
+  try {
+    await emailTransporter.sendMail({
+      from: `"ArchFlow" <${smtpFrom}>`,
+      to: toEmail,
+      subject: `${ownerName} shared "${diagramName}" with you on ArchFlow`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
+          <div style="background: linear-gradient(135deg, #6b9fdb, #9b8acc); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+            <h2 style="color: white; margin: 0; font-size: 18px;">📐 Diagram Shared With You</h2>
+          </div>
+          <div style="background: #f8f9fb; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; padding: 24px;">
+            <p style="font-size: 14px; color: #0f172a; margin: 0 0 16px;"><strong>${ownerName}</strong> shared the diagram <strong>"${diagramName}"</strong> with you as <strong>${role}</strong>.</p>
+            <a href="${shareUrl}" style="display: inline-block; padding: 10px 24px; background: linear-gradient(135deg, #6b9fdb, #9b8acc); color: white; font-weight: 600; font-size: 14px; text-decoration: none; border-radius: 8px;">Open Diagram</a>
+            <p style="font-size: 12px; color: #94a3b8; margin: 16px 0 0;">Or copy this link: <a href="${shareUrl}" style="color: #6b9fdb;">${shareUrl}</a></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; margin: 0;">This is an automated notification from ArchFlow.</p>
+          </div>
+        </div>
+      `,
+    });
+    console.log('Share invite email sent to:', toEmail);
+  } catch (e) {
+    console.error('Failed to send share invite email:', e.message);
+  }
+}
+
 app.use(express.json({ limit: '10mb' }));
 
-// Serve Vite build output in production, fallback to public/ for legacy
+// Serve Vite build output in production, fallback to legacy/ for vanilla JS version
 const fs = require('fs');
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 } else {
-  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(express.static(path.join(__dirname, 'legacy')));
 }
 
 // =============================================
@@ -102,6 +134,17 @@ function requireAuth(req, res, next) {
 function requireAdmin(req, res, next) {
   if (req.user.email.toLowerCase() !== ADMIN_EMAIL) {
     return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1];
+      req.user = jwt.verify(token, JWT_SECRET);
+    } catch { /* ignore invalid token */ }
   }
   next();
 }
@@ -195,6 +238,26 @@ app.get('/api/diagrams', requireAuth, async (req, res) => {
   }
 });
 
+// List diagrams shared with the current user (must be before :id route)
+app.get('/api/diagrams/shared-with-me', requireAuth, async (req, res) => {
+  try {
+    const email = req.user.email.toLowerCase();
+    const docs = await getDiagrams()
+      .find({ 'shares.email': email })
+      .project({ data: 0 })
+      .sort({ updatedAt: -1 })
+      .toArray();
+    const result = docs.map(doc => {
+      const share = (doc.shares || []).find(s => s.email.toLowerCase() === email);
+      return { ...doc, role: share?.role || 'viewer' };
+    });
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to list shared diagrams' });
+  }
+});
+
 // Get one diagram with full data
 app.get('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
@@ -255,6 +318,116 @@ app.delete('/api/diagrams/:id', requireAuth, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Failed to delete diagram' });
+  }
+});
+
+// =============================================
+// Sharing API
+// =============================================
+
+// Get sharing settings for a diagram (owner only)
+app.get('/api/diagrams/:id/sharing', requireAuth, async (req, res) => {
+  try {
+    const doc = await getDiagrams().findOne({ _id: req.params.id });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    if (doc.userId !== req.user.userId) return res.status(403).json({ error: 'Not the owner' });
+    res.json({
+      isPublic: doc.isPublic || false,
+      publicRole: doc.publicRole || 'viewer',
+      shareToken: doc.shareToken || null,
+      shares: doc.shares || [],
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to get sharing settings' });
+  }
+});
+
+// Update sharing settings (owner only)
+app.put('/api/diagrams/:id/sharing', requireAuth, async (req, res) => {
+  try {
+    const doc = await getDiagrams().findOne({ _id: req.params.id });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    if (doc.userId !== req.user.userId) return res.status(403).json({ error: 'Not the owner' });
+
+    const update = { $set: {} };
+    if (req.body.isPublic !== undefined) update.$set.isPublic = req.body.isPublic;
+    if (req.body.publicRole !== undefined) update.$set.publicRole = req.body.publicRole;
+    if (req.body.shares !== undefined) update.$set.shares = req.body.shares;
+
+    // Generate share token if needed (also generate when adding email shares)
+    let shareToken = doc.shareToken;
+    const needsToken = req.body.isPublic || (req.body.shares && req.body.shares.length > 0);
+    if (!shareToken && needsToken) {
+      shareToken = uuidv4().replace(/-/g, '').slice(0, 12);
+      update.$set.shareToken = shareToken;
+    }
+
+    await getDiagrams().findOneAndUpdate({ _id: req.params.id }, update);
+
+    // Send invite emails to newly added shares (async, don't block response)
+    if (req.body.shares && shareToken) {
+      const oldEmails = (doc.shares || []).map(s => s.email.toLowerCase());
+      const newShares = req.body.shares.filter(s => !oldEmails.includes(s.email.toLowerCase()));
+      if (newShares.length > 0) {
+        const shareUrl = `${req.protocol}://${req.get('host')}/s/${shareToken}`;
+        const diagramName = doc.name || 'Untitled Diagram';
+        // Look up owner name from users collection
+        const ownerDoc = await getUsers().findOne({ _id: req.user.userId });
+        const ownerName = (ownerDoc && ownerDoc.name) || req.user.email || 'Someone';
+
+        for (const share of newShares) {
+          sendShareInviteEmail(share.email, share.role, shareUrl, ownerName, diagramName).catch(() => {});
+        }
+      }
+    }
+
+    res.json({ shareToken: shareToken || doc.shareToken });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to update sharing settings' });
+  }
+});
+
+// Access a shared diagram by share token
+app.get('/api/shared/:shareToken', optionalAuth, async (req, res) => {
+  try {
+    const doc = await getDiagrams().findOne({ shareToken: req.params.shareToken });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+
+    // Determine role
+    let role = null;
+
+    // Check if user is the owner
+    if (req.user && doc.userId === req.user.userId) {
+      role = 'owner';
+    }
+
+    // Check if public access is enabled
+    if (!role && doc.isPublic) {
+      role = doc.publicRole || 'viewer';
+    }
+
+    // Check if user has a specific share
+    if (!role && req.user) {
+      const share = (doc.shares || []).find(s => s.email.toLowerCase() === req.user.email.toLowerCase());
+      if (share) role = share.role;
+    }
+
+    if (!role) return res.status(403).json({ error: 'Access denied' });
+
+    res.json({
+      _id: doc._id,
+      name: doc.name,
+      userId: doc.userId,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      data: doc.data,
+      role,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to access shared diagram' });
   }
 });
 
@@ -429,12 +602,12 @@ app.get('/api/admin/notifications', requireAuth, requireAdmin, async (req, res) 
 // SPA fallback
 // =============================================
 app.get('*', (req, res) => {
-  // Serve from dist/ (Vite build) if it exists, otherwise public/
+  // Serve from dist/ (Vite build) if it exists, otherwise legacy/
   const distIndex = path.join(__dirname, 'dist', 'index.html');
   if (fs.existsSync(distIndex)) {
     res.sendFile(distIndex);
   } else {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'legacy', 'index.html'));
   }
 });
 

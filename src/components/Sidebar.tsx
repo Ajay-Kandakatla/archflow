@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CT, SIDEBAR_SECTIONS } from '@/store/constants';
+import { NodeIcon } from '@/components/NodeIcon';
 
 interface SidebarProps {
   onClickAdd: (type: string) => void;
@@ -92,7 +93,7 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
                         onDragStart={(e) => handleDragStart(e, item.type)}
                         onClick={() => onClickAdd(item.type)}
                       >
-                        <span className="component-icon">{ct?.icon}</span>
+                        <span className="component-icon"><NodeIcon type={item.type} fallback={ct?.icon} size={24} /></span>
                         <span className="component-name">{ct?.title}</span>
                       </div>
                     );

@@ -1,7 +1,26 @@
 import React, { useCallback, useRef } from 'react';
-import type { StickyNote, PortPosition } from '@/types';
+import type { StickyNote, PortPosition, NodeColor, TextFormatting } from '@/types';
 import { useDiagram } from '@/store/DiagramContext';
+import { CV, CV_LIGHT } from '@/store/constants';
 import { screenToCanvas } from '@/utils/canvas';
+
+/** Build inline style from TextFormatting */
+function formatStyle(fmt: TextFormatting | undefined, theme: string): React.CSSProperties {
+  if (!fmt) return {};
+  const colorMap = theme === 'light' ? CV_LIGHT : CV;
+  const deco: string[] = [];
+  if (fmt.underline) deco.push('underline');
+  if (fmt.strikethrough) deco.push('line-through');
+  return {
+    fontSize: fmt.fontSize ? `${fmt.fontSize}px` : undefined,
+    fontWeight: fmt.bold ? 700 : undefined,
+    fontStyle: fmt.italic ? 'italic' : undefined,
+    textDecoration: deco.length > 0 ? deco.join(' ') : undefined,
+    textAlign: fmt.textAlign || undefined,
+    lineHeight: fmt.lineHeight ? `${fmt.lineHeight}` : undefined,
+    color: fmt.textColor ? (colorMap[fmt.textColor as NodeColor] || undefined) : undefined,
+  };
+}
 
 interface StickyNoteProps {
   note: StickyNote;
@@ -104,11 +123,7 @@ export const StickyNoteComponent = React.memo(function StickyNoteComponent({ not
       ))}
       <button className="sticky-delete" onClick={() => dispatch({ type: 'DELETE_NOTE', payload: note.id })}>✕</button>
       <textarea className="sticky-note-text" defaultValue={note.text}
-        style={{
-          fontSize: note.textFormat?.fontSize ? `${note.textFormat.fontSize}px` : undefined,
-          fontWeight: note.textFormat?.bold ? 700 : undefined,
-          fontStyle: note.textFormat?.italic ? 'italic' : undefined,
-        }}
+        style={formatStyle(note.textFormat, state.theme)}
         onChange={(e) => dispatch({ type: 'UPDATE_NOTE_TEXT', payload: { id: note.id, text: e.target.value } })} />
       <div className="sticky-note-resize" onMouseDown={handleResize} />
     </div>

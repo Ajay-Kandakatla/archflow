@@ -114,8 +114,8 @@ export const GroupContainerComponent = React.memo(function GroupContainerCompone
     e.stopPropagation();
     const nodeIdsInside = state.nodes.filter(n => {
       const el = document.getElementById('node-' + n.id);
-      const w = el?.offsetWidth || 170;
-      const h = el?.offsetHeight || 90;
+      const w = n.width || el?.offsetWidth || 170;
+      const h = n.height || el?.offsetHeight || 90;
       return n.x >= group.x && n.y >= group.y && n.x + w <= group.x + group.width && n.y + h <= group.y + group.height;
     }).map(n => n.id);
 

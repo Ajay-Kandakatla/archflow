@@ -19,6 +19,7 @@ import { AlignmentGuides } from '@/components/AlignmentGuides';
 import { AiPromptPanel } from '@/components/AiPromptPanel';
 import { TextToolbar } from '@/components/TextToolbar';
 import { Toast, showToast } from '@/components/Toast';
+import { ShareModal } from '@/components/ShareModal';
 import { useKeyboard } from '@/hooks/useKeyboard';
 import { useCanvasInteraction } from '@/hooks/useCanvasInteraction';
 import { useAutoSave, loadLocalDiagram } from '@/hooks/useAutoSave';
@@ -41,6 +42,9 @@ function AppInner() {
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<string | null>(null);
   const [aiPanelVisible, setAiPanelVisible] = useState(false);
+  const [shareRole, setShareRole] = useState<'owner' | 'editor' | 'viewer' | null>(null);
+  const [shareAccessDenied, setShareAccessDenied] = useState(false);
+  const isReadOnly = shareRole === 'viewer';
 
   // Dragging state (for alignment guides)
   const [draggingNodeId, setDraggingNodeId] = useState<number | null>(null);
@@ -95,8 +99,29 @@ function AppInner() {
   // Track if we need to center after load
   const needsCenterRef = useRef(false);
 
+  // Load shared diagram from /s/{shareToken} URL
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (!path.startsWith('/s/')) return;
+    const shareToken = path.slice(3);
+    if (!shareToken) return;
+    API.getShared(shareToken).then(doc => {
+      dispatch({ type: 'LOAD_DIAGRAM', payload: { data: doc.data, id: doc._id, name: doc.name } });
+      setDiagramName(doc.name);
+      setShareRole(doc.role as 'owner' | 'editor' | 'viewer');
+      needsCenterRef.current = true;
+    }).catch((err: any) => {
+      if (err?.status === 403) {
+        setShareAccessDenied(true);
+      } else {
+        showToast('Shared diagram not found');
+      }
+    });
+  }, [dispatch]);
+
   // Load diagram from URL on auth, or from localStorage
   useEffect(() => {
+    if (window.location.pathname.startsWith('/s/')) return; // skip for shared URLs
     const params = new URLSearchParams(window.location.search);
     const did = params.get('d');
     if (did && state.authToken) {
@@ -109,7 +134,11 @@ function AppInner() {
       // No server diagram — try loading from localStorage
       const localData = loadLocalDiagram();
       if (localData && (localData.nodes?.length > 0 || localData.stickyNotes?.length > 0 || localData.groups?.length > 0)) {
-        dispatch({ type: 'LOAD_DIAGRAM', payload: { data: localData, id: '', name: 'Untitled Diagram' } });
+        const savedDiagramId = localStorage.getItem('archflow-diagramId') || '';
+        dispatch({ type: 'LOAD_DIAGRAM', payload: { data: localData, id: savedDiagramId, name: 'Untitled Diagram' } });
+        if (savedDiagramId) {
+          history.replaceState(null, '', '/?d=' + savedDiagramId);
+        }
         needsCenterRef.current = true;
       }
     }
@@ -134,7 +163,7 @@ function AppInner() {
     diagramId: state.currentDiagramId,
     authToken: state.authToken,
     data: autoSaveData,
-    enabled: !!state.currentDiagramId && !!state.authToken,
+    enabled: !!state.currentDiagramId && !!state.authToken && !isReadOnly,
   });
 
   // Google auth callback
@@ -168,37 +197,45 @@ function AppInner() {
 
   // Save
   const handleSave = useCallback(async () => {
-    if (!state.currentDiagramId || !state.authToken) {
-      showToast('Create or open a diagram first');
+    if (!state.authToken) {
+      showToast('Sign in first to save');
       return;
     }
     try {
-      await API.update(state.currentDiagramId, { name: diagramName, data: autoSaveData });
+      if (state.currentDiagramId) {
+        // Update existing diagram
+        await API.update(state.currentDiagramId, { name: diagramName, data: autoSaveData });
+        history.replaceState(null, '', '/?d=' + state.currentDiagramId);
+        localStorage.setItem('archflow-diagramId', state.currentDiagramId);
+      } else {
+        // Create new diagram on server
+        const result = await API.create(diagramName, autoSaveData);
+        dispatch({ type: 'SET_DIAGRAM_ID', payload: result._id });
+        history.replaceState(null, '', '/?d=' + result._id);
+        localStorage.setItem('archflow-diagramId', result._id);
+      }
       showToast('Saved!');
     } catch (e) {
       showToast('Save failed');
     }
-  }, [state.currentDiagramId, state.authToken, diagramName, autoSaveData]);
+  }, [state.currentDiagramId, state.authToken, diagramName, autoSaveData, dispatch]);
 
-  // Export as SVG
-  const handleExport = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    try {
-      // Clone the canvas element for clean export
-      const clone = canvas.cloneNode(true) as HTMLElement;
-      const serialized = new XMLSerializer().serializeToString(clone);
-      const blob = new Blob([serialized], { type: 'text/html' });
-      const link = document.createElement('a');
-      link.download = `${diagramName}.html`;
-      link.href = URL.createObjectURL(blob);
-      link.click();
-      URL.revokeObjectURL(link.href);
-      showToast('Exported!');
-    } catch {
-      showToast('Export failed');
+  // Share/Export modal
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const handleExport = useCallback(async () => {
+    // Auto-save if not saved yet, so sharing works immediately
+    if (!state.currentDiagramId && state.authToken) {
+      try {
+        const result = await API.create(diagramName, autoSaveData);
+        dispatch({ type: 'SET_DIAGRAM_ID', payload: result._id });
+        history.replaceState(null, '', '/?d=' + result._id);
+        localStorage.setItem('archflow-diagramId', result._id);
+      } catch (e) {
+        showToast('Save failed');
+      }
     }
-  }, [diagramName]);
+    setShareModalVisible(true);
+  }, [state.currentDiagramId, state.authToken, diagramName, autoSaveData, dispatch]);
 
   // Rename diagram — handled via inline editing in Topbar
   const handleRenameDiagram = useCallback((newName?: string) => {
@@ -501,12 +538,25 @@ function AppInner() {
     window.addEventListener('mouseup', onUp);
   }, [state.currentTool, state.panX, state.panY, state.scale, dispatch]);
 
-  // Delete selected node
+  // Delete all selected items (nodes, notes, groups, connection)
   const handleDelete = useCallback(() => {
-    if (state.selectedNode !== null) {
-      dispatch({ type: 'DELETE_NODE', payload: state.selectedNode });
+    // Delete selected connection
+    if (state.selectedConnectionId !== null) {
+      dispatch({ type: 'DELETE_CONNECTION', payload: state.selectedConnectionId });
     }
-  }, [state.selectedNode, dispatch]);
+    // Delete selected nodes
+    state.selectedNodeIds.forEach(id => {
+      dispatch({ type: 'DELETE_NODE', payload: id });
+    });
+    // Delete selected notes
+    state.selectedNoteIds.forEach(id => {
+      dispatch({ type: 'DELETE_NOTE', payload: id });
+    });
+    // Delete selected groups
+    state.selectedGroupIds.forEach(id => {
+      dispatch({ type: 'DELETE_GROUP', payload: id });
+    });
+  }, [state.selectedNodeIds, state.selectedNoteIds, state.selectedGroupIds, state.selectedConnectionId, dispatch]);
 
   // Select all — selects all nodes, notes, and groups
   const handleSelectAll = useCallback(() => {
@@ -540,23 +590,55 @@ function AppInner() {
     showToast(`Copied ${selectedNodes.length + selectedNotes.length + selectedGroups.length} item(s)`);
   }, [state.nodes, state.stickyNotes, state.groups, state.connections, state.selectedNodeIds, state.selectedNoteIds, state.selectedGroupIds]);
 
-  // Paste copied items at offset
+  // Paste copied items at current viewport center
   const handlePaste = useCallback(() => {
     if (!clipboardRef.current) return;
     pasteCountRef.current++;
-    const offset = pasteCountRef.current * 40;
+
+    const clip = clipboardRef.current;
+    // Compute bounding box center of copied items
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    clip.nodes.forEach((n: any) => {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x + 170); maxY = Math.max(maxY, n.y + 90);
+    });
+    clip.notes.forEach((n: any) => {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x + (n.width || 200)); maxY = Math.max(maxY, n.y + (n.height || 150));
+    });
+    clip.groups.forEach((g: any) => {
+      minX = Math.min(minX, g.x); minY = Math.min(minY, g.y);
+      maxX = Math.max(maxX, g.x + (g.width || 400)); maxY = Math.max(maxY, g.y + (g.height || 300));
+    });
+
+    const clipCenterX = (minX + maxX) / 2;
+    const clipCenterY = (minY + maxY) / 2;
+
+    // Compute viewport center in canvas coordinates
+    const container = containerRef.current;
+    const rect = container?.getBoundingClientRect();
+    const viewW = rect?.width || window.innerWidth;
+    const viewH = rect?.height || window.innerHeight;
+    const viewCenterX = (viewW / 2 - state.panX) / state.scale;
+    const viewCenterY = (viewH / 2 - state.panY) / state.scale;
+
+    // Offset so items center on viewport center, with slight cascade for repeated pastes
+    const cascade = pasteCountRef.current * 30;
+    const offsetX = viewCenterX - clipCenterX + cascade;
+    const offsetY = viewCenterY - clipCenterY + cascade;
+
     dispatch({
       type: 'PASTE_ITEMS',
       payload: {
-        nodes: clipboardRef.current.nodes,
-        notes: clipboardRef.current.notes,
-        groups: clipboardRef.current.groups,
-        connections: clipboardRef.current.connections,
-        offsetX: offset,
-        offsetY: offset,
+        nodes: clip.nodes,
+        notes: clip.notes,
+        groups: clip.groups,
+        connections: clip.connections,
+        offsetX,
+        offsetY,
       },
     });
-  }, [dispatch]);
+  }, [dispatch, state.panX, state.panY, state.scale]);
 
   // Image upload
   const handleTriggerImageUpload = useCallback(() => {
@@ -607,8 +689,8 @@ function AppInner() {
     const r = marqueeRect;
     const nodeIds = state.nodes.filter(n => {
       const el = document.getElementById('node-' + n.id);
-      const w = el?.offsetWidth || 170;
-      const h = el?.offsetHeight || 90;
+      const w = n.width || el?.offsetWidth || 170;
+      const h = n.height || el?.offsetHeight || 90;
       return n.x < r.x + r.width && n.x + w > r.x && n.y < r.y + r.height && n.y + h > r.y;
     }).map(n => n.id);
 
@@ -702,8 +784,8 @@ function AppInner() {
 
   return (
     <>
-      {/* Login overlay */}
-      <LoginOverlay googleClientId={googleClientId} onCredentialResponse={handleCredentialResponse} />
+      {/* Login overlay — hide for shared diagram views */}
+      {!shareRole && <LoginOverlay googleClientId={googleClientId} onCredentialResponse={handleCredentialResponse} />}
 
       {/* Admin overlay */}
       <AdminOverlay visible={adminVisible} onClose={() => setAdminVisible(false)} authToken={state.authToken} />
@@ -722,6 +804,7 @@ function AppInner() {
         onShowAdmin={() => { setAdminVisible(true); setUserMenuOpen(false); }}
         onToggleUserMenu={() => setUserMenuOpen(p => !p)}
         userMenuOpen={userMenuOpen}
+        isReadOnly={isReadOnly}
       />
 
       {/* Hidden file input */}
@@ -734,15 +817,17 @@ function AppInner() {
         onChange={handleImageFileSelect}
       />
 
-      {/* Sidebar */}
-      <Sidebar onClickAdd={handleClickAddNode} onClickAddGroup={handleClickAddGroup} panelOpen={sidebarTab} onTabChange={setSidebarTab} onToggleAi={() => setAiPanelVisible(p => !p)} aiActive={aiPanelVisible} />
+      {/* Sidebar — hide for read-only shared views */}
+      {!isReadOnly && <Sidebar onClickAdd={handleClickAddNode} onClickAddGroup={handleClickAddGroup} panelOpen={sidebarTab} onTabChange={setSidebarTab} onToggleAi={() => setAiPanelVisible(p => !p)} aiActive={aiPanelVisible} />}
 
-      {/* Project Panel */}
-      <ProjectPanel
-        visible={state.projectPanelOpen}
-        onLoadDiagram={handleLoadDiagram}
-        onNewDiagram={handleNewDiagram}
-      />
+      {/* Project Panel — hide for read-only shared views */}
+      {!isReadOnly && (
+        <ProjectPanel
+          visible={state.projectPanelOpen}
+          onLoadDiagram={handleLoadDiagram}
+          onNewDiagram={handleNewDiagram}
+        />
+      )}
 
       {/* Canvas */}
       <div
@@ -757,7 +842,7 @@ function AppInner() {
         onDragOver={handleDragOver}
       >
         <div
-          className="canvas"
+          className={`canvas${isReadOnly ? ' read-only' : ''}`}
           id="canvas"
           ref={canvasRef}
           style={{
@@ -870,6 +955,36 @@ function AppInner() {
 
       {/* AI Prompt Panel */}
       <AiPromptPanel visible={aiPanelVisible} onClose={() => setAiPanelVisible(false)} />
+
+      {/* Share/Export Modal */}
+      {shareModalVisible && (
+        <ShareModal diagramName={diagramName} onClose={() => setShareModalVisible(false)} onSave={handleSave} />
+      )}
+
+      {/* Access denied overlay for disabled shared links */}
+      {shareAccessDenied && (
+        <div className="access-denied-overlay">
+          <div className="access-denied-box">
+            <div className="access-denied-icon">🔒</div>
+            <h2>Access Denied</h2>
+            <p>This diagram is no longer publicly shared. The owner may have disabled public access.</p>
+            <a href="/" className="access-denied-btn">Go to ArchFlow</a>
+          </div>
+        </div>
+      )}
+
+      {/* Read-only banner for shared viewer mode */}
+      {isReadOnly && (
+        <div className="read-only-banner">
+          <span>Viewing shared diagram — read only</span>
+          {!state.currentUser && (
+            <span className="read-only-signin">
+              <span className="read-only-divider">·</span>
+              <a href="/" className="read-only-signin-link">Sign in to create your own</a>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Toast */}
       <Toast />

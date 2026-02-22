@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import type { DiagramNode, Connection, StickyNote, CanvasImage, GroupContainer, ToolMode, Theme, User, PortPosition, NodeColor, ConnectionRouting, TextFormatting } from '@/types';
+import type { DiagramNode, Connection, StickyNote, CanvasImage, GroupContainer, ToolMode, Theme, User, PortPosition, NodeColor, ConnectionRouting, TextFormatting, Waypoint } from '@/types';
 import { CT, CV } from './constants';
 
 // Maximum undo history size
@@ -38,6 +38,7 @@ interface DiagramState {
 type DiagramAction =
   | { type: 'ADD_NODE'; payload: { nodeType: string; x: number; y: number } }
   | { type: 'MOVE_NODE'; payload: { id: number; x: number; y: number } }
+  | { type: 'RESIZE_NODE'; payload: { id: number; x: number; y: number; width: number; height: number } }
   | { type: 'UPDATE_NODE_TITLE'; payload: { id: number; title: string } }
   | { type: 'UPDATE_NODE_DESC'; payload: { id: number; desc: string } }
   | { type: 'DELETE_NODE'; payload: number }
@@ -49,6 +50,8 @@ type DiagramAction =
   | { type: 'CYCLE_CONNECTION_ROUTING'; payload: number }
   | { type: 'UPDATE_CONNECTION_LABEL'; payload: { id: number; label: string } }
   | { type: 'UPDATE_CONNECTION_MIDOFFSET'; payload: { id: number; midOffset: number } }
+  | { type: 'UPDATE_CONNECTION_BEZIER_OFFSET'; payload: { id: number; bezierOffset: { dx: number; dy: number } } }
+  | { type: 'UPDATE_CONNECTION_LABEL_OFFSET'; payload: { id: number; labelOffset: { dx: number; dy: number } } }
   | { type: 'ADD_NOTE'; payload: { color: string; x: number; y: number } }
   | { type: 'MOVE_NOTE'; payload: { id: number; x: number; y: number } }
   | { type: 'RESIZE_NOTE'; payload: { id: number; width: number; height: number } }
@@ -88,7 +91,11 @@ type DiagramAction =
   | { type: 'TOGGLE_SELECT_NODE'; payload: number }
   | { type: 'TOGGLE_SELECT_NOTE'; payload: number }
   | { type: 'TOGGLE_SELECT_GROUP'; payload: number }
-  | { type: 'PASTE_ITEMS'; payload: { nodes: DiagramNode[]; notes: StickyNote[]; groups: GroupContainer[]; connections: Connection[]; offsetX: number; offsetY: number } };
+  | { type: 'PASTE_ITEMS'; payload: { nodes: DiagramNode[]; notes: StickyNote[]; groups: GroupContainer[]; connections: Connection[]; offsetX: number; offsetY: number } }
+  | { type: 'RECONNECT_CONNECTION'; payload: { id: number; end: 'from' | 'to'; newId: number; newType: 'node' | 'note'; newPort: PortPosition } }
+  | { type: 'ADD_CONNECTION_WAYPOINT'; payload: { id: number; index: number; x: number; y: number } }
+  | { type: 'UPDATE_CONNECTION_WAYPOINT'; payload: { id: number; index: number; x: number; y: number } }
+  | { type: 'REMOVE_CONNECTION_WAYPOINT'; payload: { id: number; index: number } };
 
 const initialState: DiagramState = {
   nodes: [],
@@ -129,6 +136,8 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
     }
     case 'MOVE_NODE':
       return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, x: action.payload.x, y: action.payload.y } : n) };
+    case 'RESIZE_NODE':
+      return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, x: action.payload.x, y: action.payload.y, width: action.payload.width, height: action.payload.height } : n) };
     case 'UPDATE_NODE_TITLE':
       return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, title: action.payload.title } : n) };
     case 'UPDATE_NODE_DESC':
@@ -203,6 +212,10 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
       return { ...state, connections: state.connections.map(c => c.id === action.payload.id ? { ...c, label: action.payload.label } : c) };
     case 'UPDATE_CONNECTION_MIDOFFSET':
       return { ...state, connections: state.connections.map(c => c.id === action.payload.id ? { ...c, midOffset: action.payload.midOffset } : c) };
+    case 'UPDATE_CONNECTION_BEZIER_OFFSET':
+      return { ...state, connections: state.connections.map(c => c.id === action.payload.id ? { ...c, bezierOffset: action.payload.bezierOffset } : c) };
+    case 'UPDATE_CONNECTION_LABEL_OFFSET':
+      return { ...state, connections: state.connections.map(c => c.id === action.payload.id ? { ...c, labelOffset: action.payload.labelOffset } : c) };
     case 'ADD_NOTE': {
       const id = state.noteIdCounter + 1;
       const note: StickyNote = { id, x: action.payload.x, y: action.payload.y, color: action.payload.color as any, text: 'Add your note here...', width: 200, height: 150 };
@@ -278,8 +291,8 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
         .filter(n => !childNodeIds.includes(n.id))
         .filter(n => {
           const el = typeof document !== 'undefined' ? document.getElementById('node-' + n.id) : null;
-          const w = el?.offsetWidth || 170;
-          const h = el?.offsetHeight || 90;
+          const w = n.width || el?.offsetWidth || 170;
+          const h = n.height || el?.offsetHeight || 90;
           return n.x >= grp.x && n.y >= grp.y && n.x + w <= grp.x + grp.width && n.y + h <= grp.y + grp.height;
         })
         .map(n => n.id);
@@ -408,8 +421,8 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       selNodes.forEach(n => {
         const el = document.getElementById('node-' + n.id);
-        const w = el?.offsetWidth || 170;
-        const h = el?.offsetHeight || 90;
+        const w = n.width || el?.offsetWidth || 170;
+        const h = n.height || el?.offsetHeight || 90;
         minX = Math.min(minX, n.x);
         minY = Math.min(minY, n.y);
         maxX = Math.max(maxX, n.x + w);
@@ -526,7 +539,10 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
         .filter(c => nodeIdMap[c.from] !== undefined && nodeIdMap[c.to] !== undefined)
         .map(c => {
           cid++;
-          return { ...c, id: cid, from: nodeIdMap[c.from], to: nodeIdMap[c.to] };
+          return {
+            ...c, id: cid, from: nodeIdMap[c.from], to: nodeIdMap[c.to],
+            waypoints: c.waypoints?.map((w: Waypoint) => ({ x: w.x + offsetX, y: w.y + offsetY })),
+          };
         });
 
       return {
@@ -544,6 +560,63 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
         selectedGroupIds: newGroups.map(g => g.id),
         selectedNode: newNodes.length > 0 ? newNodes[0].id : null,
         selectedGroup: newGroups.length > 0 ? newGroups[0].id : null,
+      };
+    }
+    case 'RECONNECT_CONNECTION': {
+      const { id, end, newId, newType, newPort } = action.payload;
+      return {
+        ...state,
+        connections: state.connections.map(c => {
+          if (c.id !== id) return c;
+          if (end === 'from') {
+            let newColor: NodeColor = c.color;
+            if (newType === 'node') {
+              const node = state.nodes.find(n => n.id === newId);
+              if (node) newColor = node.color;
+            }
+            return { ...c, from: newId, fromType: newType, fromPort: newPort, color: newColor };
+          } else {
+            return { ...c, to: newId, toType: newType, toPort: newPort };
+          }
+        }),
+      };
+    }
+    case 'ADD_CONNECTION_WAYPOINT': {
+      const { id, index, x, y } = action.payload;
+      return {
+        ...state,
+        connections: state.connections.map(c => {
+          if (c.id !== id) return c;
+          const wps = [...(c.waypoints || [])];
+          wps.splice(index, 0, { x, y });
+          return { ...c, waypoints: wps };
+        }),
+      };
+    }
+    case 'UPDATE_CONNECTION_WAYPOINT': {
+      const { id, index, x, y } = action.payload;
+      return {
+        ...state,
+        connections: state.connections.map(c => {
+          if (c.id !== id) return c;
+          const wps = [...(c.waypoints || [])];
+          if (index >= 0 && index < wps.length) {
+            wps[index] = { x, y };
+          }
+          return { ...c, waypoints: wps };
+        }),
+      };
+    }
+    case 'REMOVE_CONNECTION_WAYPOINT': {
+      const { id, index } = action.payload;
+      return {
+        ...state,
+        connections: state.connections.map(c => {
+          if (c.id !== id) return c;
+          const wps = [...(c.waypoints || [])];
+          wps.splice(index, 1);
+          return { ...c, waypoints: wps.length > 0 ? wps : undefined };
+        }),
       };
     }
     default:
@@ -564,7 +637,7 @@ const NON_UNDOABLE_ACTIONS = new Set([
   'SET_DIAGRAM_ID', 'TOGGLE_PROJECT_PANEL', 'SELECT_NODE', 'SELECT_GROUP', 'SELECT_CONNECTION',
   'SELECT_MULTIPLE', 'CLEAR_SELECTION', 'UNDO', 'MOVE_NODE', 'MOVE_NOTE',
   'MOVE_GROUP', 'MOVE_SELECTED', 'MOVE_IMAGE', 'RESIZE_NOTE', 'RESIZE_GROUP',
-  'RESIZE_IMAGE', 'UPDATE_CONNECTION_MIDOFFSET',
+  'RESIZE_NODE', 'RESIZE_IMAGE', 'UPDATE_CONNECTION_MIDOFFSET', 'UPDATE_CONNECTION_BEZIER_OFFSET', 'UPDATE_CONNECTION_LABEL_OFFSET', 'UPDATE_CONNECTION_WAYPOINT',
   'TOGGLE_SELECT_NODE', 'TOGGLE_SELECT_NOTE', 'TOGGLE_SELECT_GROUP',
 ]);
 

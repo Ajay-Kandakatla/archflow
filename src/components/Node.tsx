@@ -1,8 +1,28 @@
 import React, { useCallback, useRef } from 'react';
-import type { DiagramNode, PortPosition } from '@/types';
+import type { DiagramNode, PortPosition, NodeColor, TextFormatting } from '@/types';
 import { useDiagram } from '@/store/DiagramContext';
+import { CV, CV_LIGHT } from '@/store/constants';
 import { screenToCanvas } from '@/utils/canvas';
 import { computeSnap } from '@/utils/snap';
+import { NodeIcon } from '@/components/NodeIcon';
+
+/** Build inline style from TextFormatting */
+function formatStyle(fmt: TextFormatting | undefined, theme: string): React.CSSProperties {
+  if (!fmt) return {};
+  const colorMap = theme === 'light' ? CV_LIGHT : CV;
+  const deco: string[] = [];
+  if (fmt.underline) deco.push('underline');
+  if (fmt.strikethrough) deco.push('line-through');
+  return {
+    fontSize: fmt.fontSize ? `${fmt.fontSize}px` : undefined,
+    fontWeight: fmt.bold ? 700 : undefined,
+    fontStyle: fmt.italic ? 'italic' : undefined,
+    textDecoration: deco.length > 0 ? deco.join(' ') : undefined,
+    textAlign: fmt.textAlign || undefined,
+    lineHeight: fmt.lineHeight ? `${fmt.lineHeight}` : undefined,
+    color: fmt.textColor ? (colorMap[fmt.textColor as NodeColor] || undefined) : undefined,
+  };
+}
 
 interface NodeProps {
   node: DiagramNode;
@@ -25,7 +45,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.node-port') || target.closest('.node-delete') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+    if (target.closest('.node-port') || target.closest('.node-delete') || target.closest('.node-resize') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
     if (state.currentTool !== 'select') return;
     e.stopPropagation(); // Prevent canvas from stealing this event
 
@@ -59,8 +79,8 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
 
       // Snap to alignment (reads DOM for live positions)
       const el = document.getElementById('node-' + node.id);
-      const w = el?.offsetWidth || 170;
-      const h = el?.offsetHeight || 90;
+      const w = node.width || el?.offsetWidth || 170;
+      const h = node.height || el?.offsetHeight || 90;
       const snap = computeSnap(newX, newY, w, h, state.nodes, state.groups, node.id, null);
       if (snap.snapX !== null) newX = snap.snapX;
       if (snap.snapY !== null) newY = snap.snapY;
@@ -80,8 +100,8 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
   const handlePortMouseDown = useCallback((e: React.MouseEvent, port: PortPosition) => {
     e.stopPropagation();
     const el = document.getElementById('node-' + node.id);
-    const w = el?.offsetWidth || 170;
-    const h = el?.offsetHeight || 90;
+    const w = node.width || el?.offsetWidth || 170;
+    const h = node.height || el?.offsetHeight || 90;
     let pos = { x: node.x, y: node.y };
     switch (port) {
       case 'top': pos = { x: node.x + w / 2, y: node.y }; break;
@@ -90,14 +110,61 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
       case 'right': pos = { x: node.x + w, y: node.y + h / 2 }; break;
     }
     onPortDragStart(node.id, port, pos);
-  }, [node.id, node.x, node.y, onPortDragStart]);
+  }, [node.id, node.x, node.y, node.width, node.height, onPortDragStart]);
+
+  // Resize handler — supports 8 handles: 4 edges + 4 corners
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, handle: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const el = document.getElementById('node-' + node.id);
+    const startW = node.width || el?.offsetWidth || 170;
+    const startH = node.height || el?.offsetHeight || 90;
+    const startX = node.x;
+    const startY = node.y;
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const MIN_W = 140;
+    const MIN_H = 70;
+
+    const onMove = (ev: MouseEvent) => {
+      const { scale } = panScaleRef.current;
+      const dx = (ev.clientX - startMouseX) / scale;
+      const dy = (ev.clientY - startMouseY) / scale;
+      let newX = startX;
+      let newY = startY;
+      let newW = startW;
+      let newH = startH;
+
+      // Apply resize based on which handle is being dragged
+      if (handle.includes('right')) { newW = Math.max(MIN_W, startW + dx); }
+      if (handle.includes('left')) { newW = Math.max(MIN_W, startW - dx); newX = startX + startW - newW; }
+      if (handle.includes('bottom')) { newH = Math.max(MIN_H, startH + dy); }
+      if (handle.includes('top')) { newH = Math.max(MIN_H, startH - dy); newY = startY + startH - newH; }
+
+      dispatch({ type: 'RESIZE_NODE', payload: { id: node.id, x: newX, y: newY, width: newW, height: newH } });
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [node.id, node.x, node.y, node.width, node.height, dispatch]);
+
+  const nodeStyle: React.CSSProperties = {
+    left: node.x,
+    top: node.y,
+    ...(node.width ? { width: node.width } : {}),
+    ...(node.height ? { height: node.height } : {}),
+    ...(zIndex !== undefined ? { zIndex } : {}),
+  };
 
   return (
     <div
       className={`node ${isSelected ? 'selected' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
       id={'node-' + node.id}
       data-color={node.color}
-      style={{ left: node.x, top: node.y, ...(zIndex !== undefined ? { zIndex } : {}) }}
+      style={nodeStyle}
       onMouseDown={handleMouseDown}
     >
       {(['top', 'bottom', 'left', 'right'] as PortPosition[]).map(port => (
@@ -105,23 +172,30 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
           onMouseDown={(e) => handlePortMouseDown(e, port)} />
       ))}
       <button className="node-delete" onClick={() => dispatch({ type: 'DELETE_NODE', payload: node.id })}>✕</button>
+
+      {/* Resize handles — 4 edges + 4 corners */}
+      {(isSelected || isMultiSelected) && (
+        <>
+          <div className="node-resize node-resize-top" onMouseDown={(e) => handleResizeMouseDown(e, 'top')} />
+          <div className="node-resize node-resize-bottom" onMouseDown={(e) => handleResizeMouseDown(e, 'bottom')} />
+          <div className="node-resize node-resize-left" onMouseDown={(e) => handleResizeMouseDown(e, 'left')} />
+          <div className="node-resize node-resize-right" onMouseDown={(e) => handleResizeMouseDown(e, 'right')} />
+          <div className="node-resize node-resize-top-left" onMouseDown={(e) => handleResizeMouseDown(e, 'top-left')} />
+          <div className="node-resize node-resize-top-right" onMouseDown={(e) => handleResizeMouseDown(e, 'top-right')} />
+          <div className="node-resize node-resize-bottom-left" onMouseDown={(e) => handleResizeMouseDown(e, 'bottom-left')} />
+          <div className="node-resize node-resize-bottom-right" onMouseDown={(e) => handleResizeMouseDown(e, 'bottom-right')} />
+        </>
+      )}
+
       <div className="node-header">
-        <span className="node-icon">{node.icon}</span>
+        <NodeIcon type={node.type} fallback={node.icon} size={22} className="node-icon" />
         <input className="node-title" defaultValue={node.title}
-          style={{
-            fontSize: node.titleFormat?.fontSize ? `${node.titleFormat.fontSize}px` : undefined,
-            fontWeight: node.titleFormat?.bold ? 700 : undefined,
-            fontStyle: node.titleFormat?.italic ? 'italic' : undefined,
-          }}
+          style={formatStyle(node.titleFormat, state.theme)}
           onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
       </div>
       <div className="node-body">
         <textarea className="node-desc" defaultValue={node.desc}
-          style={{
-            fontSize: node.descFormat?.fontSize ? `${node.descFormat.fontSize}px` : undefined,
-            fontWeight: node.descFormat?.bold ? 700 : undefined,
-            fontStyle: node.descFormat?.italic ? 'italic' : undefined,
-          }}
+          style={formatStyle(node.descFormat, state.theme)}
           onChange={(e) => dispatch({ type: 'UPDATE_NODE_DESC', payload: { id: node.id, desc: e.target.value } })} />
       </div>
     </div>

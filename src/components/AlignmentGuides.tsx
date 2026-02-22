@@ -31,8 +31,8 @@ export function AlignmentGuides({ draggingNodeId, draggingGroupId }: AlignmentGu
       dragX = dn.x;
       dragY = dn.y;
       const el = document.getElementById('node-' + dn.id);
-      dragW = el?.offsetWidth || 170;
-      dragH = el?.offsetHeight || 90;
+      dragW = dn.width || el?.offsetWidth || 170;
+      dragH = dn.height || el?.offsetHeight || 90;
     } else if (draggingGroupId !== null) {
       const dg = state.groups.find(g => g.id === draggingGroupId);
       if (!dg) return [];
@@ -51,8 +51,8 @@ export function AlignmentGuides({ draggingNodeId, draggingGroupId }: AlignmentGu
     state.nodes.forEach(n => {
       if (n.id === draggingNodeId) return;
       const el = document.getElementById('node-' + n.id);
-      const w = el?.offsetWidth || 170;
-      const h = el?.offsetHeight || 90;
+      const w = n.width || el?.offsetWidth || 170;
+      const h = n.height || el?.offsetHeight || 90;
       const cx = n.x + w / 2;
       const cy = n.y + h / 2;
 

@@ -120,4 +120,36 @@ export const API = {
     const r = await authFetch('/api/admin/stats', { headers: authHeaders() });
     return r.json();
   },
+
+  // Sharing APIs
+  async getSharing(diagramId: string): Promise<{ isPublic: boolean; publicRole: string; shareToken: string | null; shares: Array<{ email: string; role: string; addedAt?: string }> }> {
+    const r = await authFetch(`/api/diagrams/${diagramId}/sharing`, { headers: authHeaders() });
+    return r.json();
+  },
+
+  async updateSharing(diagramId: string, payload: any): Promise<{ shareToken: string }> {
+    const r = await authFetch(`/api/diagrams/${diagramId}/sharing`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return r.json();
+  },
+
+  async getShared(shareToken: string): Promise<DiagramMeta & { role: string }> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const r = await fetch('/api/shared/' + shareToken, { headers });
+    if (!r.ok) {
+      const err = new Error(r.status === 403 ? 'Access denied' : 'Not found');
+      (err as any).status = r.status;
+      throw err;
+    }
+    return r.json();
+  },
+
+  async getSharedWithMe(): Promise<DiagramMeta[]> {
+    const r = await authFetch('/api/diagrams/shared-with-me', { headers: authHeaders() });
+    return r.json();
+  },
 };

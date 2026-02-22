@@ -36,8 +36,8 @@ export function computeSnap(
   for (const n of nodes) {
     if (n.id === draggingNodeId) continue;
     const el = document.getElementById('node-' + n.id);
-    const w = el?.offsetWidth || 170;
-    const h = el?.offsetHeight || 90;
+    const w = n.width || el?.offsetWidth || 170;
+    const h = n.height || el?.offsetHeight || 90;
     const cx = n.x + w / 2;
     const cy = n.y + h / 2;
 
