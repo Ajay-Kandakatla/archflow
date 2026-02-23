@@ -39,16 +39,16 @@ export const API = {
     return r.json();
   },
 
-  async create(name: string, data: Partial<DiagramData>): Promise<DiagramMeta> {
+  async create(name: string, data: Partial<DiagramData>, folder?: string): Promise<DiagramMeta> {
     const r = await authFetch('/api/diagrams', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ name, data }),
+      body: JSON.stringify({ name, data, folder: folder || '' }),
     });
     return r.json();
   },
 
-  async update(id: string, payload: { name?: string; data?: DiagramData }): Promise<DiagramMeta> {
+  async update(id: string, payload: { name?: string; data?: DiagramData; folder?: string }): Promise<DiagramMeta> {
     if (!id || id === 'undefined' || id === 'null') throw new Error('Invalid diagram ID');
     const r = await authFetch('/api/diagrams/' + id, {
       method: 'PUT',

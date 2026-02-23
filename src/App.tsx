@@ -16,6 +16,7 @@ import { AdminOverlay } from '@/components/AdminOverlay';
 import { HintOverlay } from '@/components/HintOverlay';
 import { LoginOverlay } from '@/components/LoginOverlay';
 import { DocsPage } from '@/components/DocsPage';
+import { DevDocsPage } from '@/components/DevDocsPage';
 import { AlignmentGuides } from '@/components/AlignmentGuides';
 import { AiPromptPanel } from '@/components/AiPromptPanel';
 import { TextToolbar } from '@/components/TextToolbar';
@@ -126,6 +127,7 @@ function AppInner() {
   useEffect(() => {
     if (window.location.pathname.startsWith('/s/')) return; // skip for shared URLs
     if (window.location.pathname === '/docs') return; // skip for docs page
+    if (window.location.pathname === '/dev-docs') return; // skip for dev-docs page
     const params = new URLSearchParams(window.location.search);
     const did = params.get('d');
     // Guard against invalid IDs like 'undefined' or 'null' in URL
@@ -304,10 +306,10 @@ function AppInner() {
   }, [dispatch]);
 
   // New diagram
-  const handleNewDiagram = useCallback(async () => {
+  const handleNewDiagram = useCallback(async (folder?: string) => {
     if (!state.authToken) return;
     try {
-      const result = await API.create('Untitled Diagram', {});
+      const result = await API.create('Untitled Diagram', {}, folder);
       dispatch({ type: 'CLEAR_CANVAS' });
       dispatch({ type: 'SET_DIAGRAM_ID', payload: result._id });
       setDiagramName('Untitled Diagram');
@@ -799,6 +801,7 @@ function AppInner() {
     <>
       {/* Docs page — full-screen overlay at /docs */}
       {window.location.pathname === '/docs' && <DocsPage />}
+      {window.location.pathname === '/dev-docs' && <DevDocsPage />}
 
       {/* Login overlay — hide for shared diagram views */}
       {!shareRole && <LoginOverlay googleClientId={googleClientId} onCredentialResponse={handleCredentialResponse} devLoginEnabled={devLoginEnabled} />}

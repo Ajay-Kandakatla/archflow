@@ -312,6 +312,7 @@ app.post('/api/diagrams', requireAuth, async (req, res) => {
     const doc = {
       _id: uuidv4(),
       name: req.body.name || 'Untitled Diagram',
+      folder: req.body.folder || '',
       userId: req.user.userId,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -335,6 +336,7 @@ app.put('/api/diagrams/:id', requireAuth, async (req, res) => {
     const update = { $set: { updatedAt: new Date() } };
     if (req.body.name !== undefined) update.$set.name = req.body.name;
     if (req.body.data !== undefined) update.$set.data = req.body.data;
+    if (req.body.folder !== undefined) update.$set.folder = req.body.folder;
 
     const result = await getDiagrams().findOneAndUpdate(
       { _id: id },

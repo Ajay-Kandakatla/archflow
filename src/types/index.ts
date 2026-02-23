@@ -161,5 +161,6 @@ export interface DiagramMeta {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  folder?: string;
   data?: DiagramData;
 }
