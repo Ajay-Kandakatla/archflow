@@ -18,7 +18,11 @@ export function LoginOverlay({ googleClientId, onCredentialResponse, devLoginEna
   const [devLoading, setDevLoading] = useState(false);
 
   useEffect(() => {
-    if (googleClientId && btnRef.current && !rendered.current && (window as any).google) {
+    if (!googleClientId || !btnRef.current || rendered.current) return;
+
+    const tryRender = () => {
+      if (rendered.current || !btnRef.current) return true;
+      if (!(window as any).google?.accounts?.id) return false;
       try {
         (window as any).google.accounts.id.initialize({
           client_id: googleClientId,
@@ -29,9 +33,21 @@ export function LoginOverlay({ googleClientId, onCredentialResponse, devLoginEna
           theme: 'outline', size: 'large', type: 'standard', text: 'signin_with', width: 300,
         });
         rendered.current = true;
+        return true;
       } catch (e) {
         console.error('Google init failed:', e);
+        return false;
       }
+    };
+
+    // Google GSI script loads async — retry until it's available (up to 5s)
+    if (!tryRender()) {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (tryRender() || attempts >= 10) clearInterval(interval);
+      }, 500);
+      return () => clearInterval(interval);
     }
   }, [googleClientId, onCredentialResponse]);
 

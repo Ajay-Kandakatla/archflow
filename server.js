@@ -293,7 +293,11 @@ app.get('/api/diagrams/shared-with-me', requireAuth, async (req, res) => {
 // Get one diagram with full data
 app.get('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
-    const doc = await getDiagrams().findOne({ _id: req.params.id });
+    const id = req.params.id;
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid diagram ID' });
+    }
+    const doc = await getDiagrams().findOne({ _id: id });
     if (!doc) return res.status(404).json({ error: 'Not found' });
     res.json(doc);
   } catch (e) {
@@ -324,12 +328,16 @@ app.post('/api/diagrams', requireAuth, async (req, res) => {
 // Update diagram (auto-save target)
 app.put('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
+    const id = req.params.id;
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid diagram ID' });
+    }
     const update = { $set: { updatedAt: new Date() } };
     if (req.body.name !== undefined) update.$set.name = req.body.name;
     if (req.body.data !== undefined) update.$set.data = req.body.data;
 
     const result = await getDiagrams().findOneAndUpdate(
-      { _id: req.params.id },
+      { _id: id },
       update,
       { returnDocument: 'after' }
     );
@@ -344,7 +352,11 @@ app.put('/api/diagrams/:id', requireAuth, async (req, res) => {
 // Delete diagram
 app.delete('/api/diagrams/:id', requireAuth, async (req, res) => {
   try {
-    const result = await getDiagrams().deleteOne({ _id: req.params.id });
+    const id = req.params.id;
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: 'Invalid diagram ID' });
+    }
+    const result = await getDiagrams().deleteOne({ _id: id });
     if (result.deletedCount === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   } catch (e) {

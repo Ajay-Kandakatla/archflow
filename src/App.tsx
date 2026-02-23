@@ -125,22 +125,32 @@ function AppInner() {
   // Load diagram from URL on auth, or from localStorage
   useEffect(() => {
     if (window.location.pathname.startsWith('/s/')) return; // skip for shared URLs
+    if (window.location.pathname === '/docs') return; // skip for docs page
     const params = new URLSearchParams(window.location.search);
     const did = params.get('d');
-    if (did && state.authToken) {
+    // Guard against invalid IDs like 'undefined' or 'null' in URL
+    const isValidId = (id: string | null): id is string => !!id && id !== 'undefined' && id !== 'null';
+    if (isValidId(did) && state.authToken) {
       API.get(did).then(doc => {
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data: doc.data, id: doc._id, name: doc.name } });
         setDiagramName(doc.name);
         needsCenterRef.current = true;
-      }).catch(() => {});
+      }).catch(() => {
+        // Invalid diagram ID in URL — clean it up
+        history.replaceState(null, '', '/');
+      });
+    } else if (did && !isValidId(did)) {
+      // Clean up invalid ?d= param from URL
+      history.replaceState(null, '', '/');
     } else if (state.nodes.length === 0) {
       // No server diagram — try loading from localStorage
       const localData = loadLocalDiagram();
       if (localData && (localData.nodes?.length > 0 || localData.stickyNotes?.length > 0 || localData.groups?.length > 0)) {
         const savedDiagramId = localStorage.getItem('archflow-diagramId') || '';
-        dispatch({ type: 'LOAD_DIAGRAM', payload: { data: localData, id: savedDiagramId, name: 'Untitled Diagram' } });
-        if (savedDiagramId) {
-          history.replaceState(null, '', '/?d=' + savedDiagramId);
+        const validSavedId = isValidId(savedDiagramId) ? savedDiagramId : '';
+        dispatch({ type: 'LOAD_DIAGRAM', payload: { data: localData, id: validSavedId, name: 'Untitled Diagram' } });
+        if (validSavedId) {
+          history.replaceState(null, '', '/?d=' + validSavedId);
         }
         needsCenterRef.current = true;
       }
