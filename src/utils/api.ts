@@ -28,11 +28,14 @@ async function authFetch(url: string, opts: RequestInit = {}): Promise<Response>
 export const API = {
   async list(): Promise<DiagramMeta[]> {
     const r = await authFetch('/api/diagrams', { headers: authHeaders() });
-    return r.json();
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
   },
 
   async get(id: string): Promise<DiagramMeta> {
+    if (!id || id === 'undefined' || id === 'null') throw new Error('Invalid diagram ID');
     const r = await authFetch('/api/diagrams/' + id, { headers: authHeaders() });
+    if (!r.ok) throw new Error(`Failed to get diagram: ${r.status}`);
     return r.json();
   },
 
@@ -46,6 +49,7 @@ export const API = {
   },
 
   async update(id: string, payload: { name?: string; data?: DiagramData }): Promise<DiagramMeta> {
+    if (!id || id === 'undefined' || id === 'null') throw new Error('Invalid diagram ID');
     const r = await authFetch('/api/diagrams/' + id, {
       method: 'PUT',
       headers: authHeaders(),
@@ -83,7 +87,16 @@ export const API = {
     return r.json();
   },
 
-  async getConfig(): Promise<{ googleClientId: string }> {
+  async devLogin(name: string, email: string): Promise<{ user: User; token: string }> {
+    const r = await fetch('/api/auth/dev-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    });
+    return r.json();
+  },
+
+  async getConfig(): Promise<{ googleClientId: string; devLoginEnabled?: boolean }> {
     const r = await fetch('/api/config');
     return r.json();
   },

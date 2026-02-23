@@ -48,6 +48,48 @@ function getShapeSVG(type: string): React.ReactNode {
       return <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />;
     case 'rounded-rect':
       return <rect x="1" y="1" width="98" height="98" rx="16" ry="16" />;
+    // Flowchart shapes
+    case 'fc-terminator':
+      return <rect x="1" y="1" width="98" height="98" rx="49" ry="49" />;
+    case 'fc-process':
+      return <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />;
+    case 'fc-decision':
+      return <polygon points="50,1 99,50 50,99 1,50" />;
+    case 'fc-subprocess':
+      return (
+        <>
+          <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />
+          <line x1="12" y1="1" x2="12" y2="99" strokeOpacity="0.4" />
+          <line x1="88" y1="1" x2="88" y2="99" strokeOpacity="0.4" />
+        </>
+      );
+    case 'fc-document':
+      return <path d="M1,1 L99,1 L99,78 C80,70 60,92 40,84 C20,76 5,90 1,85 Z" />;
+    case 'fc-data':
+      return <polygon points="18,1 99,1 82,99 1,99" />;
+    case 'fc-database':
+      return (
+        <>
+          <path d="M1,20 C1,8 50,1 50,1 C50,1 99,8 99,20 L99,80 C99,92 50,99 50,99 C50,99 1,92 1,80 Z" />
+          <ellipse cx="50" cy="20" rx="49" ry="19" fillOpacity="0" strokeOpacity="0.35" />
+        </>
+      );
+    case 'fc-manual':
+      return <polygon points="1,18 99,1 99,99 1,99" />;
+    case 'fc-predefined':
+      return (
+        <>
+          <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />
+          <line x1="12" y1="1" x2="12" y2="99" strokeOpacity="0.4" />
+          <line x1="88" y1="1" x2="88" y2="99" strokeOpacity="0.4" />
+        </>
+      );
+    case 'fc-connector':
+      return <circle cx="50" cy="50" r="35" />;
+    case 'fc-delay':
+      return <path d="M1,1 L65,1 C85,1 99,25 99,50 C99,75 85,99 65,99 L1,99 Z" />;
+    case 'fc-merge':
+      return <polygon points="1,1 99,1 50,99" />;
     default:
       return <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />;
   }
@@ -384,7 +426,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     const MIN_H = 30;
 
     // Lock aspect ratio for circle and diamond shapes
-    const lockedAspect = (node.type === 'circle' || node.type === 'diamond');
+    const lockedAspect = (node.type === 'circle' || node.type === 'diamond' || node.type === 'fc-decision' || node.type === 'fc-connector');
 
     const onMove = (ev: MouseEvent) => {
       const { scale } = panScaleRef.current;

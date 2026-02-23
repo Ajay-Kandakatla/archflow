@@ -848,36 +848,56 @@ export function ConnectionsSvg() {
               {/* Dashed animated */}
               <path d={pathD} stroke={color} strokeWidth="2" fill="none" opacity="0.3" strokeDasharray="6 4"
                 style={{ animation: 'flowDash 1s linear infinite', pointerEvents: 'none' }} />
-              {/* Invisible thick hitbox for easy clicking — disabled when selected to allow click-through to nodes */}
+              {/* Invisible thick hitbox for clicking & drag-to-bend — disabled when selected to allow click-through */}
               <path d={pathD} stroke="transparent" strokeWidth="16" fill="none"
                 style={{ pointerEvents: isSelected ? 'none' : 'stroke', cursor: 'pointer' }}
-                onClick={(e) => {
+                onMouseDown={(e) => {
+                  if (e.button !== 0) return;
                   e.stopPropagation();
-                  dispatch({ type: 'SELECT_CONNECTION', payload: conn.id });
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  // Add waypoint at double-click position
+                  e.preventDefault();
                   const container = document.getElementById('canvasContainer');
                   if (!container) return;
+                  const { panX, panY, scale } = panScaleRef.current;
                   const rect = container.getBoundingClientRect();
-                  const canvasPos = screenToCanvas(e.clientX, e.clientY, rect, state.panX, state.panY, state.scale);
-                  // Find nearest segment to insert into
+                  const canvasPos = screenToCanvas(e.clientX, e.clientY, rect, panX, panY, scale);
+                  // Find nearest segment to insert waypoint
                   const pts = [p1, ...(conn.waypoints || []), p2];
                   let bestIdx = 0;
                   let bestDist = Infinity;
                   for (let i = 0; i < pts.length - 1; i++) {
                     const ax = pts[i].x, ay = pts[i].y;
                     const bx = pts[i + 1].x, by = pts[i + 1].y;
-                    const dx = bx - ax, dy = by - ay;
-                    const len2 = dx * dx + dy * dy;
-                    const t = len2 > 0 ? Math.max(0, Math.min(1, ((canvasPos.x - ax) * dx + (canvasPos.y - ay) * dy) / len2)) : 0;
-                    const px = ax + t * dx, py = ay + t * dy;
+                    const ddx = bx - ax, ddy = by - ay;
+                    const len2 = ddx * ddx + ddy * ddy;
+                    const t = len2 > 0 ? Math.max(0, Math.min(1, ((canvasPos.x - ax) * ddx + (canvasPos.y - ay) * ddy) / len2)) : 0;
+                    const px = ax + t * ddx, py = ay + t * ddy;
                     const dist = Math.sqrt((canvasPos.x - px) ** 2 + (canvasPos.y - py) ** 2);
                     if (dist < bestDist) { bestDist = dist; bestIdx = i; }
                   }
-                  dispatch({ type: 'ADD_CONNECTION_WAYPOINT', payload: { id: conn.id, index: bestIdx, x: canvasPos.x, y: canvasPos.y } });
+                  // Select connection and insert waypoint immediately
                   dispatch({ type: 'SELECT_CONNECTION', payload: conn.id });
+                  dispatch({ type: 'ADD_CONNECTION_WAYPOINT', payload: { id: conn.id, index: bestIdx, x: canvasPos.x, y: canvasPos.y } });
+                  // Determine the actual waypoint index in the array after insertion
+                  const wpIndex = bestIdx;
+                  let moved = false;
+                  // Start dragging the new waypoint immediately
+                  const onMove = (ev: MouseEvent) => {
+                    moved = true;
+                    const ps = panScaleRef.current;
+                    const r = container.getBoundingClientRect();
+                    const p = screenToCanvas(ev.clientX, ev.clientY, r, ps.panX, ps.panY, ps.scale);
+                    dispatch({ type: 'UPDATE_CONNECTION_WAYPOINT', payload: { id: conn.id, index: wpIndex, x: p.x, y: p.y } });
+                  };
+                  const onUp = () => {
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup', onUp);
+                    // If user didn't drag, remove the waypoint (it was just a click to select)
+                    if (!moved) {
+                      dispatch({ type: 'REMOVE_CONNECTION_WAYPOINT', payload: { id: conn.id, index: wpIndex } });
+                    }
+                  };
+                  window.addEventListener('mousemove', onMove);
+                  window.addEventListener('mouseup', onUp);
                 }} />
               {/* Main path */}
               <path d={pathD} className="connection-path" stroke={color} id={pathId}

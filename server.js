@@ -32,6 +32,7 @@ function initEmailTransporter() {
       port: parseInt(smtpPort),
       secure: parseInt(smtpPort) === 465,
       auth: { user: smtpUser, pass: smtpPass },
+      family: 4, // Force IPv4 — Railway doesn't support IPv6 outbound
     });
     console.log('  Email notifications enabled via', smtpHost);
   } else {
@@ -153,7 +154,38 @@ function optionalAuth(req, res, next) {
 // Config endpoint (serves Google Client ID to frontend)
 // =============================================
 app.get('/api/config', (req, res) => {
-  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || '' });
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    devLoginEnabled: !process.env.GOOGLE_CLIENT_ID,
+  });
+});
+
+// =============================================
+// Dev Login (only when Google Client ID is not set)
+// =============================================
+app.post('/api/auth/dev-login', async (req, res) => {
+  if (process.env.GOOGLE_CLIENT_ID) {
+    return res.status(403).json({ error: 'Dev login disabled in production' });
+  }
+
+  const { name, email } = req.body;
+  if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+
+  const userId = 'dev-' + email.replace(/[^a-zA-Z0-9]/g, '-');
+  const user = { id: userId, email, name, picture: null };
+
+  // Upsert user in DB
+  await getUsers().updateOne(
+    { _id: userId },
+    {
+      $set: { email, name, picture: null, lastLoginAt: new Date() },
+      $setOnInsert: { createdAt: new Date() },
+    },
+    { upsert: true }
+  );
+
+  const token = jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
+  res.json({ user, token });
 });
 
 // =============================================

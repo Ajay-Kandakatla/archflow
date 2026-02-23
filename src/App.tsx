@@ -15,6 +15,7 @@ import { ProjectPanel } from '@/components/ProjectPanel';
 import { AdminOverlay } from '@/components/AdminOverlay';
 import { HintOverlay } from '@/components/HintOverlay';
 import { LoginOverlay } from '@/components/LoginOverlay';
+import { DocsPage } from '@/components/DocsPage';
 import { AlignmentGuides } from '@/components/AlignmentGuides';
 import { AiPromptPanel } from '@/components/AiPromptPanel';
 import { TextToolbar } from '@/components/TextToolbar';
@@ -40,6 +41,7 @@ function AppInner() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [adminVisible, setAdminVisible] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [devLoginEnabled, setDevLoginEnabled] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<string | null>(null);
   const [aiPanelVisible, setAiPanelVisible] = useState(false);
   const [shareRole, setShareRole] = useState<'owner' | 'editor' | 'viewer' | null>(null);
@@ -77,6 +79,7 @@ function AppInner() {
   useEffect(() => {
     API.getConfig().then(cfg => {
       if (cfg.googleClientId) setGoogleClientId(cfg.googleClientId);
+      if (cfg.devLoginEnabled) setDevLoginEnabled(true);
     }).catch(() => {});
   }, []);
 
@@ -784,8 +787,11 @@ function AppInner() {
 
   return (
     <>
+      {/* Docs page — full-screen overlay at /docs */}
+      {window.location.pathname === '/docs' && <DocsPage />}
+
       {/* Login overlay — hide for shared diagram views */}
-      {!shareRole && <LoginOverlay googleClientId={googleClientId} onCredentialResponse={handleCredentialResponse} />}
+      {!shareRole && <LoginOverlay googleClientId={googleClientId} onCredentialResponse={handleCredentialResponse} devLoginEnabled={devLoginEnabled} />}
 
       {/* Admin overlay */}
       <AdminOverlay visible={adminVisible} onClose={() => setAdminVisible(false)} authToken={state.authToken} />

@@ -48,6 +48,19 @@ export const CT: ComponentTypes = {
   'hexagon':        { icon: '⬡', title: 'Hexagon',        desc: '',                        badge: '',          color: 'orange' },
   'cylinder':       { icon: '⬭', title: 'Cylinder',       desc: '',                        badge: '',          color: 'red' },
   'parallelogram':  { icon: '▱', title: 'Parallelogram',  desc: '',                        badge: '',          color: 'pink' },
+  // Flowchart Shapes
+  'fc-terminator':  { icon: '⬭', title: 'Start / End',    desc: '',                        badge: '',          color: 'green' },
+  'fc-process':     { icon: '▭', title: 'Process',         desc: '',                        badge: '',          color: 'blue' },
+  'fc-decision':    { icon: '◆', title: 'Decision',        desc: '',                        badge: '',          color: 'orange' },
+  'fc-subprocess':  { icon: '▣', title: 'Subprocess',      desc: '',                        badge: '',          color: 'purple' },
+  'fc-document':    { icon: '📄', title: 'Document',        desc: '',                        badge: '',          color: 'cyan' },
+  'fc-data':        { icon: '▱', title: 'Data / IO',       desc: '',                        badge: '',          color: 'yellow' },
+  'fc-database':    { icon: '⬭', title: 'Database',        desc: '',                        badge: '',          color: 'red' },
+  'fc-manual':      { icon: '⏢', title: 'Manual Input',    desc: '',                        badge: '',          color: 'pink' },
+  'fc-predefined':  { icon: '⊞', title: 'Predefined',      desc: '',                        badge: '',          color: 'purple' },
+  'fc-connector':   { icon: '●', title: 'Connector',       desc: '',                        badge: '',          color: 'green' },
+  'fc-delay':       { icon: '▷', title: 'Delay',           desc: '',                        badge: '',          color: 'orange' },
+  'fc-merge':       { icon: '▽', title: 'Merge',           desc: '',                        badge: '',          color: 'cyan' },
   // Wireframe Elements
   'wf-button':      { icon: '',  title: 'Button',         desc: '',                        badge: '',          color: 'blue' },
   'wf-input':       { icon: '',  title: 'Text Input',     desc: '',                        badge: '',          color: 'blue' },
@@ -86,6 +99,9 @@ export const CT: ComponentTypes = {
 export const SHAPE_TYPES = new Set([
   'circle', 'diamond', 'hexagon', 'rectangle', 'rounded-rect',
   'pill', 'cylinder', 'parallelogram',
+  'fc-terminator', 'fc-process', 'fc-decision', 'fc-subprocess',
+  'fc-document', 'fc-data', 'fc-database', 'fc-manual',
+  'fc-predefined', 'fc-connector', 'fc-delay', 'fc-merge',
 ]);
 
 /** Icon node type — renders as a centered SVG icon */
@@ -128,6 +144,19 @@ export const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number 
   'parallelogram':  { width: 160, height: 100 },
   'rectangle':      { width: 150, height: 100 },
   'rounded-rect':   { width: 150, height: 100 },
+  // Flowchart shapes
+  'fc-terminator':  { width: 160, height: 80 },
+  'fc-process':     { width: 150, height: 90 },
+  'fc-decision':    { width: 140, height: 140 },
+  'fc-subprocess':  { width: 150, height: 90 },
+  'fc-document':    { width: 140, height: 110 },
+  'fc-data':        { width: 150, height: 100 },
+  'fc-database':    { width: 120, height: 130 },
+  'fc-manual':      { width: 150, height: 100 },
+  'fc-predefined':  { width: 150, height: 90 },
+  'fc-connector':   { width: 70, height: 70 },
+  'fc-delay':       { width: 140, height: 80 },
+  'fc-merge':       { width: 120, height: 100 },
   // Wireframe elements
   'wf-button':      { width: 120, height: 40 },
   'wf-input':       { width: 200, height: 60 },

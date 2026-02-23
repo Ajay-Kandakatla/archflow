@@ -48,11 +48,14 @@ export function TemplateModal({ visible, onHide, onLoad }: TemplateModalProps) {
               <div className="template-category-title">{cat.category}</div>
               <div className="template-grid">
                 {cat.items.map(t => (
-                  <div key={t.name} className="template-card" data-accent={t.accent} onClick={() => onLoad(t.name)}>
+                  <div key={t.name} className="template-card" data-accent={t.accent}>
                     <div className="template-card-preview">{t.preview}</div>
                     <div className="template-card-title">{t.title}</div>
                     <div className="template-card-desc">{t.desc}</div>
                     <span className="template-card-badge">{t.badge}</span>
+                    <button className="template-use-btn" onClick={() => onLoad(t.name)}>
+                      Use Template
+                    </button>
                   </div>
                 ))}
               </div>

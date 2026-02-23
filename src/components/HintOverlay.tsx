@@ -9,8 +9,8 @@ export function HintOverlay() {
     setDismissed(true);
   }, []);
 
-  // Hide if there are nodes on canvas or if dismissed
-  if (dismissed || state.nodes.length > 0) return null;
+  // Hide if there are any objects on canvas or if dismissed
+  if (dismissed || state.nodes.length > 0 || state.stickyNotes.length > 0 || state.groups.length > 0 || state.canvasImages.length > 0) return null;
 
   return (
     <div className="hint-overlay" id="hintOverlay" onClick={handleClick}>

@@ -158,6 +158,7 @@ export function Topbar({
             {currentUser.email.toLowerCase() === 'ajaykandakatla@gmail.com' && (
               <div className="user-menu-item" onClick={onShowAdmin}>Admin Dashboard</div>
             )}
+            <a href="/docs" className="user-menu-item" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>Documentation</a>
             <div className="user-menu-item" onClick={onSignOut}>Sign out</div>
           </div>
         )}
