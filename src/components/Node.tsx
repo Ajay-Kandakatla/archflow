@@ -329,9 +329,11 @@ interface NodeProps {
   onDragEnd?: () => void;
   onMultiDragStart?: (e: React.MouseEvent) => void;
   zIndex?: number;
+  highlightedPorts?: Set<string>;
+  snapTarget?: { id: number; type: string; port: string } | null;
 }
 
-export const NodeComponent = React.memo(function NodeComponent({ node, isSelected, isMultiSelected, containerRef, onPortDragStart, onDragStart, onDragEnd, onMultiDragStart, zIndex }: NodeProps) {
+export const NodeComponent = React.memo(function NodeComponent({ node, isSelected, isMultiSelected, containerRef, onPortDragStart, onDragStart, onDragEnd, onMultiDragStart, zIndex, highlightedPorts, snapTarget }: NodeProps) {
   const { state, dispatch } = useDiagram();
   const dragRef = useRef({ dragging: false, offsetX: 0, offsetY: 0 });
   // Keep refs to current pan/scale so drag handler always has fresh values
@@ -495,10 +497,18 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
       style={nodeStyle}
       onMouseDown={handleMouseDown}
     >
-      {(['top', 'bottom', 'left', 'right'] as PortPosition[]).map(port => (
-        <div key={port} className={`node-port ${port}`} data-port={port}
-          onMouseDown={(e) => handlePortMouseDown(e, port)} />
-      ))}
+      {(['top', 'bottom', 'left', 'right'] as PortPosition[]).map(port => {
+        const portKey = `node-${node.id}-${port}`;
+        const isHighlighted = highlightedPorts?.has(portKey);
+        const isSnap = snapTarget?.id === node.id && snapTarget?.type === 'node' && snapTarget?.port === port;
+        return (
+          <div key={port}
+            className={`node-port ${port}${isHighlighted ? ' port-highlight' : ''}${isSnap ? ' port-snap-target' : ''}`}
+            data-port={port}
+            onMouseDown={(e) => handlePortMouseDown(e, port)}
+          />
+        );
+      })}
       <button className="node-delete" onClick={() => dispatch({ type: 'DELETE_NODE', payload: node.id })}>✕</button>
 
       {/* Resize handles — 4 edges + 4 corners */}

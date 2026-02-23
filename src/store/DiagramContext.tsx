@@ -167,9 +167,21 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
     case 'SELECT_CONNECTION':
       return { ...state, selectedConnectionId: action.payload, selectedNode: null, selectedNodeIds: [], selectedNoteIds: [], selectedGroupIds: [], selectedGroup: null };
     case 'ADD_CONNECTION': {
-      const id = state.connectionIdCounter + 1;
       const fromType = action.payload.fromType || 'node';
       const toType = action.payload.toType || 'node';
+      // Prevent duplicate connections (same endpoints & ports, either direction)
+      const dup = state.connections.some(c => {
+        const cft = c.fromType || 'node';
+        const ctt = c.toType || 'node';
+        return (
+          (c.from === action.payload.from && cft === fromType && c.fromPort === action.payload.fromPort &&
+           c.to === action.payload.to && ctt === toType && c.toPort === action.payload.toPort) ||
+          (c.from === action.payload.to && cft === toType && c.fromPort === action.payload.toPort &&
+           c.to === action.payload.from && ctt === fromType && c.toPort === action.payload.fromPort)
+        );
+      });
+      if (dup) return state;
+      const id = state.connectionIdCounter + 1;
       // Determine color from the source endpoint
       let connColor: NodeColor = 'blue';
       if (fromType === 'node') {

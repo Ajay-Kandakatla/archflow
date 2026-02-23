@@ -28,6 +28,7 @@ import { useAutoSave, loadLocalDiagram } from '@/hooks/useAutoSave';
 import { API, setAuthToken } from '@/utils/api';
 import { getTemplateData, TEMPLATE_NAMES } from '@/utils/templates';
 import { screenToCanvas } from '@/utils/canvas';
+import { getValidTargetPorts, findNearestSnapPort, isDuplicateConnection, type TargetPort } from '@/utils/connectionSnap';
 import type { PortPosition, ToolMode, DiagramData } from '@/types';
 
 function AppInner() {
@@ -75,6 +76,10 @@ function AppInner() {
     drawing: false, fromId: 0, fromType: 'node', fromPort: 'bottom', startPos: { x: 0, y: 0 },
   });
   const [tempConn, setTempConn] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [highlightedPorts, setHighlightedPorts] = useState<Set<string>>(new Set());
+  const [snapTarget, setSnapTarget] = useState<{ id: number; type: string; port: string } | null>(null);
+  const snapTargetRef = useRef<{ id: number; type: string; port: string } | null>(null);
+  const validPortsRef = useRef<TargetPort[]>([]);
 
   // Load Google client ID on mount
   useEffect(() => {
@@ -502,45 +507,76 @@ function AppInner() {
     connRef.current = { drawing: true, fromId: endpointId, fromType: endpointType, fromPort: port, startPos };
     setTempConn({ x1: startPos.x, y1: startPos.y, x2: startPos.x, y2: startPos.y });
 
+    // Pre-compute valid target ports once at drag start
+    validPortsRef.current = getValidTargetPorts(state.nodes, state.stickyNotes, endpointId, endpointType);
+
     const onMove = (ev: MouseEvent) => {
       if (!connRef.current.drawing || !containerRef.current) return;
       const r = containerRef.current.getBoundingClientRect();
       const p = screenToCanvas(ev.clientX, ev.clientY, r, state.panX, state.panY, state.scale);
-      setTempConn({ x1: startPos.x, y1: startPos.y, x2: p.x, y2: p.y });
+
+      // Find snap target and highlighted ports
+      const { snapPort, highlightedKeys } = findNearestSnapPort(p.x, p.y, validPortsRef.current);
+
+      // If snapped, override the endpoint position
+      const endX = snapPort ? snapPort.position.x : p.x;
+      const endY = snapPort ? snapPort.position.y : p.y;
+
+      setTempConn({ x1: startPos.x, y1: startPos.y, x2: endX, y2: endY });
+      setHighlightedPorts(highlightedKeys);
+      const snapInfo = snapPort ? { id: snapPort.id, type: snapPort.type, port: snapPort.port } : null;
+      setSnapTarget(snapInfo);
+      snapTargetRef.current = snapInfo;
     };
 
     const onUp = (ev: MouseEvent) => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       setTempConn(null);
+      setHighlightedPorts(new Set());
+      const currentSnap = snapTargetRef.current;
+      setSnapTarget(null);
+      snapTargetRef.current = null;
+      validPortsRef.current = [];
 
       if (!connRef.current.drawing) return;
       connRef.current.drawing = false;
 
-      // Find target port (works for both .node and .sticky-note)
-      const target = document.elementFromPoint(ev.clientX, ev.clientY);
-      if (!target) return;
-      const portEl = target.closest('.node-port') as HTMLElement;
-      if (!portEl) return;
-      const toPort = portEl.dataset.port as PortPosition;
-
-      // Determine target type and ID
+      // Try snap target first (more reliable), fall back to elementFromPoint
       let toId: number;
       let toType: 'node' | 'note';
-      const nodeEl = portEl.closest('.node') as HTMLElement;
-      const noteEl = portEl.closest('.sticky-note') as HTMLElement;
-      if (nodeEl) {
-        toId = parseInt(nodeEl.id.replace('node-', ''));
-        toType = 'node';
-      } else if (noteEl) {
-        toId = parseInt(noteEl.id.replace('note-', ''));
-        toType = 'note';
+      let toPort: PortPosition;
+
+      if (currentSnap) {
+        toId = currentSnap.id;
+        toType = currentSnap.type as 'node' | 'note';
+        toPort = currentSnap.port as PortPosition;
       } else {
-        return;
+        // Fall back to DOM-based detection
+        const target = document.elementFromPoint(ev.clientX, ev.clientY);
+        if (!target) return;
+        const portEl = target.closest('.node-port') as HTMLElement;
+        if (!portEl) return;
+        toPort = portEl.dataset.port as PortPosition;
+
+        const nodeEl = portEl.closest('.node') as HTMLElement;
+        const noteEl = portEl.closest('.sticky-note') as HTMLElement;
+        if (nodeEl) {
+          toId = parseInt(nodeEl.id.replace('node-', ''));
+          toType = 'node';
+        } else if (noteEl) {
+          toId = parseInt(noteEl.id.replace('note-', ''));
+          toType = 'note';
+        } else {
+          return;
+        }
       }
 
       // Can't connect to self
       if (toId === endpointId && toType === endpointType) return;
+
+      // Prevent duplicate connections
+      if (isDuplicateConnection(endpointId, endpointType, port, toId, toType, toPort, state.connections)) return;
 
       dispatch({
         type: 'ADD_CONNECTION',
@@ -551,7 +587,7 @@ function AppInner() {
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [state.currentTool, state.panX, state.panY, state.scale, dispatch]);
+  }, [state.currentTool, state.panX, state.panY, state.scale, state.nodes, state.stickyNotes, state.connections, dispatch]);
 
   // Delete all selected items (nodes, notes, groups, connection)
   const handleDelete = useCallback(() => {
@@ -899,10 +935,17 @@ function AppInner() {
               <line
                 x1={tempConn.x1} y1={tempConn.y1}
                 x2={tempConn.x2} y2={tempConn.y2}
-                stroke="#4f8ff7" strokeWidth="2" strokeDasharray="6 4"
-                opacity="0.8"
+                stroke={snapTarget ? '#4fff8f' : '#4f8ff7'}
+                strokeWidth={snapTarget ? 2.5 : 2}
+                strokeDasharray={snapTarget ? 'none' : '6 4'}
+                opacity={snapTarget ? 1 : 0.8}
               />
-              <circle cx={tempConn.x2} cy={tempConn.y2} r="6" fill="#4f8ff7" opacity="0.5" />
+              <circle
+                cx={tempConn.x2} cy={tempConn.y2}
+                r={snapTarget ? 8 : 6}
+                fill={snapTarget ? '#4fff8f' : '#4f8ff7'}
+                opacity={snapTarget ? 0.7 : 0.5}
+              />
             </svg>
           )}
 
@@ -920,6 +963,8 @@ function AppInner() {
               isMultiSelected={state.selectedNoteIds.includes(note.id)}
               onMultiDragStart={handleMultiDragStart}
               onPortDragStart={handlePortDragStart}
+              highlightedPorts={highlightedPorts}
+              snapTarget={snapTarget}
             />
           ))}
 
@@ -936,6 +981,8 @@ function AppInner() {
               onDragEnd={() => setDraggingNodeId(null)}
               onMultiDragStart={handleMultiDragStart}
               zIndex={state.selectedNode === node.id ? 100 : 10 + idx}
+              highlightedPorts={highlightedPorts}
+              snapTarget={snapTarget}
             />
           ))}
 

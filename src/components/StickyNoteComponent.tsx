@@ -28,9 +28,11 @@ interface StickyNoteProps {
   isMultiSelected?: boolean;
   onMultiDragStart?: (e: React.MouseEvent) => void;
   onPortDragStart?: (noteId: number, port: PortPosition, startPos: { x: number; y: number }, endpointType: 'note') => void;
+  highlightedPorts?: Set<string>;
+  snapTarget?: { id: number; type: string; port: string } | null;
 }
 
-export const StickyNoteComponent = React.memo(function StickyNoteComponent({ note, containerRef, isMultiSelected, onMultiDragStart, onPortDragStart }: StickyNoteProps) {
+export const StickyNoteComponent = React.memo(function StickyNoteComponent({ note, containerRef, isMultiSelected, onMultiDragStart, onPortDragStart, highlightedPorts, snapTarget }: StickyNoteProps) {
   const { state, dispatch } = useDiagram();
   const dragRef = useRef({ dragging: false, offsetX: 0, offsetY: 0 });
   const panScaleRef = useRef({ panX: state.panX, panY: state.panY, scale: state.scale });
@@ -117,10 +119,18 @@ export const StickyNoteComponent = React.memo(function StickyNoteComponent({ not
       onMouseDown={handleMouseDown}
     >
       {/* Connection ports */}
-      {(['top', 'bottom', 'left', 'right'] as PortPosition[]).map(port => (
-        <div key={port} className={`note-port node-port ${port}`} data-port={port}
-          onMouseDown={(e) => handlePortMouseDown(e, port)} />
-      ))}
+      {(['top', 'bottom', 'left', 'right'] as PortPosition[]).map(port => {
+        const portKey = `note-${note.id}-${port}`;
+        const isHighlighted = highlightedPorts?.has(portKey);
+        const isSnap = snapTarget?.id === note.id && snapTarget?.type === 'note' && snapTarget?.port === port;
+        return (
+          <div key={port}
+            className={`note-port node-port ${port}${isHighlighted ? ' port-highlight' : ''}${isSnap ? ' port-snap-target' : ''}`}
+            data-port={port}
+            onMouseDown={(e) => handlePortMouseDown(e, port)}
+          />
+        );
+      })}
       <button className="sticky-delete" onClick={() => dispatch({ type: 'DELETE_NOTE', payload: note.id })}>✕</button>
       <textarea className="sticky-note-text" defaultValue={note.text}
         style={formatStyle(note.textFormat, state.theme)}
