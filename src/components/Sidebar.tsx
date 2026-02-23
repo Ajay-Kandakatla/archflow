@@ -13,7 +13,7 @@ interface SidebarProps {
 
 // Tab definitions with icons and category mappings
 const TABS = [
-  { id: 'system', icon: '🏗️', label: 'System Blocks', sections: [0, 1, 2, 3, 4, 5] }, // All system categories
+  { id: 'system', icon: '🏗️', label: 'System Blocks', sections: [0, 1, 2, 3, 4, 5, 6] }, // All system categories
   { id: 'shapes', icon: '◇', label: 'Shapes', sections: [] as number[] }, // Empty blocks / basic shapes
   { id: 'groups', icon: '▢', label: 'Groups', sections: [] as number[] }, // Group containers
   { id: 'notes', icon: '📝', label: 'Notes', sections: [] as number[] }, // Sticky notes

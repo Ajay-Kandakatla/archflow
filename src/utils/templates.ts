@@ -270,6 +270,12 @@ export function getTemplateData(name: string): Partial<DiagramData> | null {
     case 'fullstack-api':
       return buildFullStackApiTemplate();
 
+    case 'graphql-federation':
+      return buildGraphqlFederationTemplate();
+
+    case 'graphql-api':
+      return buildGraphqlApiTemplate();
+
     default:
       return null;
   }
@@ -462,6 +468,166 @@ function buildFullStackApiTemplate(): Partial<DiagramData> {
   };
 }
 
+function buildGraphqlFederationTemplate(): Partial<DiagramData> {
+  // Layout: Supergraph gateway at top, subgraph services in the middle (grouped),
+  // databases at bottom, clients on the left, monitoring on the right
+  const mk = (id: number, type: string, x: number, y: number, title?: string, desc?: string) => {
+    const ct = CT[type];
+    return { id, type, x, y, icon: ct.icon, title: title || ct.title, desc: desc || ct.desc, badge: ct.badge, color: ct.color };
+  };
+
+  // ── Group: Client Apps (blue) ──
+  const clientG = { x: 60, y: 60, w: 440, h: 180 };
+  // ── Group: Supergraph Router (pink) ──
+  const routerG = { x: 60, y: 300, w: 440, h: 180 };
+  // ── Group: Subgraphs (purple) ──
+  const subG    = { x: 60, y: 540, w: 900, h: 200 };
+  // ── Group: Data Sources (red) ──
+  const dataG   = { x: 60, y: 800, w: 900, h: 200 };
+  // ── Group: Observability (green) ──
+  const obsG    = { x: 560, y: 60, w: 400, h: 420 };
+
+  const nodes: DiagramNode[] = [
+    // Clients (group 1)
+    mk(1,  'browser',   clientG.x + 50,   clientG.y + 60, 'Web App',       'React + Apollo'),
+    mk(2,  'mobile',    clientG.x + 250,  clientG.y + 60, 'Mobile App',    'Swift + Apollo iOS'),
+
+    // Supergraph Router (group 2)
+    mk(3,  'supergraph', routerG.x + 50,  routerG.y + 55, 'Supergraph Router', 'Apollo Router / Gateway'),
+    mk(4,  'auth',       routerG.x + 270, routerG.y + 55, 'Auth Plugin',       'JWT validation'),
+
+    // Subgraphs (group 3)
+    mk(5,  'subgraph',  subG.x + 40,   subG.y + 60, 'Users Subgraph',    '@key: User.id'),
+    mk(6,  'subgraph',  subG.x + 240,  subG.y + 60, 'Products Subgraph', '@key: Product.sku'),
+    mk(7,  'subgraph',  subG.x + 440,  subG.y + 60, 'Orders Subgraph',   '@key: Order.id'),
+    mk(8,  'subgraph',  subG.x + 640,  subG.y + 60, 'Reviews Subgraph',  '@key: Review.id'),
+
+    // Data Sources (group 4)
+    mk(9,  'postgres',  dataG.x + 40,   dataG.y + 60, 'Users DB',     'PostgreSQL'),
+    mk(10, 'mongodb',   dataG.x + 240,  dataG.y + 60, 'Products DB',  'MongoDB catalog'),
+    mk(11, 'postgres',  dataG.x + 440,  dataG.y + 60, 'Orders DB',    'PostgreSQL'),
+    mk(12, 'redis',     dataG.x + 640,  dataG.y + 60, 'Reviews Cache', 'Redis + Postgres'),
+
+    // Observability (group 5)
+    mk(13, 'monitoring', obsG.x + 50,  obsG.y + 60,  'Apollo Studio',  'Schema registry'),
+    mk(14, 'analytics',  obsG.x + 50,  obsG.y + 190, 'Query Metrics',  'Trace & latency'),
+    mk(15, 'logging',    obsG.x + 230, obsG.y + 60,  'Schema Checks',  'CI/CD validation'),
+  ];
+
+  const groups: any[] = [
+    { id: 1, ...clientG, width: clientG.w, height: clientG.h, color: 'blue',   title: '🖥️ Client Applications',   childNodeIds: [1, 2], childNoteIds: [] },
+    { id: 2, ...routerG, width: routerG.w, height: routerG.h, color: 'pink',   title: '◉ Supergraph Router',      childNodeIds: [3, 4], childNoteIds: [] },
+    { id: 3, ...subG,    width: subG.w,    height: subG.h,    color: 'purple', title: '◇ Federated Subgraphs',    childNodeIds: [5, 6, 7, 8], childNoteIds: [] },
+    { id: 4, ...dataG,   width: dataG.w,   height: dataG.h,   color: 'red',    title: '🗄️ Data Sources',          childNodeIds: [9, 10, 11, 12], childNoteIds: [] },
+    { id: 5, ...obsG,    width: obsG.w,    height: obsG.h,    color: 'green',  title: '📊 Observability & Schema', childNodeIds: [13, 14, 15], childNoteIds: [] },
+  ];
+
+  const connections: Connection[] = [
+    // Clients → Router
+    { id: 1,  from: 1, fromPort: 'bottom', to: 3, toPort: 'top', color: 'blue',   label: 'GraphQL',     direction: 'forward' as const },
+    { id: 2,  from: 2, fromPort: 'bottom', to: 3, toPort: 'top', color: 'blue',   label: 'GraphQL',     direction: 'forward' as const },
+    // Router internals
+    { id: 3,  from: 3, fromPort: 'right',  to: 4, toPort: 'left', color: 'purple', label: 'Auth Check',  direction: 'bidirectional' as const },
+    // Router → Subgraphs
+    { id: 4,  from: 3, fromPort: 'bottom', to: 5, toPort: 'top', color: 'pink',   label: 'Query Plan',  direction: 'forward' as const },
+    { id: 5,  from: 3, fromPort: 'bottom', to: 6, toPort: 'top', color: 'pink',   label: 'Query Plan',  direction: 'forward' as const },
+    { id: 6,  from: 3, fromPort: 'bottom', to: 7, toPort: 'top', color: 'pink',   label: 'Query Plan',  direction: 'forward' as const },
+    { id: 7,  from: 3, fromPort: 'bottom', to: 8, toPort: 'top', color: 'pink',   label: 'Query Plan',  direction: 'forward' as const },
+    // Subgraph entity references
+    { id: 8,  from: 7, fromPort: 'left',   to: 5, toPort: 'right', color: 'purple', label: '@requires',   direction: 'forward' as const },
+    { id: 9,  from: 8, fromPort: 'left',   to: 6, toPort: 'right', color: 'purple', label: '@provides',   direction: 'forward' as const },
+    // Subgraphs → Data
+    { id: 10, from: 5, fromPort: 'bottom', to: 9,  toPort: 'top', color: 'red',    label: 'SQL',         direction: 'forward' as const },
+    { id: 11, from: 6, fromPort: 'bottom', to: 10, toPort: 'top', color: 'red',    label: 'Documents',   direction: 'forward' as const },
+    { id: 12, from: 7, fromPort: 'bottom', to: 11, toPort: 'top', color: 'red',    label: 'SQL',         direction: 'forward' as const },
+    { id: 13, from: 8, fromPort: 'bottom', to: 12, toPort: 'top', color: 'cyan',   label: 'Cache + DB',  direction: 'forward' as const },
+    // Router → Observability
+    { id: 14, from: 3, fromPort: 'right',  to: 13, toPort: 'left', color: 'green', label: 'Schema Push', direction: 'forward' as const },
+    { id: 15, from: 13, fromPort: 'bottom', to: 14, toPort: 'top', color: 'yellow', label: 'Traces',     direction: 'forward' as const },
+    { id: 16, from: 13, fromPort: 'right',  to: 15, toPort: 'left', color: 'green', label: '',            direction: 'forward' as const },
+  ];
+
+  const stickyNotes: StickyNote[] = [
+    { id: 1, x: 60, y: -60, color: 'yellow' as any, text: 'GraphQL Federation (Supergraph)\n\nCompose multiple subgraphs into a single unified API.\nEach team owns their subgraph independently.', width: 340, height: 100 },
+    { id: 2, x: 560, y: 500, color: 'pink' as any, text: 'Entity Resolution\n\nSubgraphs share types via @key directives.\nThe router plans federated queries automatically.', width: 280, height: 100 },
+  ];
+
+  return {
+    nodes, connections, stickyNotes, canvasImages: [], groups,
+    nodeIdCounter: 15, connectionIdCounter: 16, noteIdCounter: 2, imageIdCounter: 0, groupIdCounter: 5,
+  };
+}
+
+function buildGraphqlApiTemplate(): Partial<DiagramData> {
+  // Simpler template: GraphQL API with clients, gateway, resolvers, and data sources
+  const mk = (id: number, type: string, x: number, y: number, title?: string, desc?: string) => {
+    const ct = CT[type];
+    return { id, type, x, y, icon: ct.icon, title: title || ct.title, desc: desc || ct.desc, badge: ct.badge, color: ct.color };
+  };
+
+  // ── Group: Clients (blue) ──
+  const clientG = { x: 80, y: 60, w: 700, h: 180 };
+  // ── Group: GraphQL Layer (pink) ──
+  const gqlG    = { x: 80, y: 300, w: 700, h: 340 };
+  // ── Group: Data Sources (red) ──
+  const dataG   = { x: 80, y: 700, w: 700, h: 200 };
+
+  const nodes: DiagramNode[] = [
+    // Clients
+    mk(1, 'browser',  clientG.x + 50,  clientG.y + 60, 'Web App',     'React + urql'),
+    mk(2, 'mobile',   clientG.x + 260, clientG.y + 60, 'Mobile App',  'Flutter + Ferry'),
+    mk(3, 'desktop',  clientG.x + 470, clientG.y + 60, 'Admin Panel', 'Next.js + Apollo'),
+
+    // GraphQL Layer
+    mk(4,  'graphql',    gqlG.x + 250, gqlG.y + 50,  'GraphQL API',     'Queries + Mutations'),
+    mk(5,  'auth',       gqlG.x + 50,  gqlG.y + 50,  'Auth Middleware',  'JWT + Permissions'),
+    mk(6,  'server',     gqlG.x + 50,  gqlG.y + 190, 'User Resolver',   'CRUD operations'),
+    mk(7,  'server',     gqlG.x + 260, gqlG.y + 190, 'Product Resolver', 'Catalog queries'),
+    mk(8,  'serverless', gqlG.x + 470, gqlG.y + 50,  'Subscriptions',   'WebSocket real-time'),
+    mk(9,  'serverless', gqlG.x + 470, gqlG.y + 190, 'File Uploads',    'Multipart mutations'),
+
+    // Data Sources
+    mk(10, 'postgres', dataG.x + 50,  dataG.y + 60, 'Primary DB',    'PostgreSQL'),
+    mk(11, 'redis',    dataG.x + 260, dataG.y + 60, 'Cache Layer',   'Redis'),
+    mk(12, 'mongodb',  dataG.x + 470, dataG.y + 60, 'Search Index',  'Elasticsearch'),
+  ];
+
+  const groups: any[] = [
+    { id: 1, ...clientG, width: clientG.w, height: clientG.h, color: 'blue', title: '🖥️ Client Applications',    childNodeIds: [1, 2, 3], childNoteIds: [] },
+    { id: 2, ...gqlG,    width: gqlG.w,    height: gqlG.h,    color: 'pink', title: '◈ GraphQL API Layer',       childNodeIds: [4, 5, 6, 7, 8, 9], childNoteIds: [] },
+    { id: 3, ...dataG,   width: dataG.w,   height: dataG.h,   color: 'red',  title: '🗄️ Data Sources',           childNodeIds: [10, 11, 12], childNoteIds: [] },
+  ];
+
+  const connections: Connection[] = [
+    // Clients → GraphQL
+    { id: 1,  from: 1, fromPort: 'bottom', to: 4, toPort: 'top', color: 'blue',   label: 'GraphQL',       direction: 'forward' as const },
+    { id: 2,  from: 2, fromPort: 'bottom', to: 4, toPort: 'top', color: 'blue',   label: 'GraphQL',       direction: 'forward' as const },
+    { id: 3,  from: 3, fromPort: 'bottom', to: 4, toPort: 'top', color: 'blue',   label: 'GraphQL',       direction: 'forward' as const },
+    { id: 4,  from: 3, fromPort: 'bottom', to: 8, toPort: 'top', color: 'blue',   label: 'WS',            direction: 'bidirectional' as const },
+    // Auth
+    { id: 5,  from: 4, fromPort: 'left',   to: 5, toPort: 'right', color: 'purple', label: 'Authorize',   direction: 'bidirectional' as const },
+    // GraphQL → Resolvers
+    { id: 6,  from: 4, fromPort: 'bottom', to: 6, toPort: 'top', color: 'pink',   label: 'userQuery',     direction: 'forward' as const },
+    { id: 7,  from: 4, fromPort: 'bottom', to: 7, toPort: 'top', color: 'pink',   label: 'productQuery',  direction: 'forward' as const },
+    { id: 8,  from: 4, fromPort: 'right',  to: 9, toPort: 'left', color: 'pink',  label: 'uploadMutation', direction: 'forward' as const },
+    // Resolvers → Data
+    { id: 9,  from: 6, fromPort: 'bottom', to: 10, toPort: 'top', color: 'red',   label: 'SQL',           direction: 'forward' as const },
+    { id: 10, from: 7, fromPort: 'bottom', to: 11, toPort: 'top', color: 'cyan',  label: 'Cache Check',   direction: 'bidirectional' as const },
+    { id: 11, from: 7, fromPort: 'bottom', to: 12, toPort: 'top', color: 'red',   label: 'Full-text',     direction: 'forward' as const },
+    { id: 12, from: 5, fromPort: 'bottom', to: 10, toPort: 'top', color: 'purple', label: 'User Lookup',  direction: 'forward' as const },
+  ];
+
+  const stickyNotes: StickyNote[] = [
+    { id: 1, x: 80, y: -60, color: 'yellow' as any, text: 'GraphQL API Architecture\n\nSingle endpoint for all queries & mutations.\nType-safe, self-documenting schema.', width: 300, height: 100 },
+    { id: 2, x: 500, y: -60, color: 'green' as any, text: 'Key Features\n\nReal-time subscriptions via WebSocket.\nFile uploads with multipart mutations.\nPermission-based field access.', width: 280, height: 100 },
+  ];
+
+  return {
+    nodes, connections, stickyNotes, canvasImages: [], groups,
+    nodeIdCounter: 12, connectionIdCounter: 12, noteIdCounter: 2, imageIdCounter: 0, groupIdCounter: 3,
+  };
+}
+
 export const TEMPLATE_NAMES: Record<string, string> = {
   'persistent-db': 'Persistent Database',
   'microservices': 'Microservices',
@@ -474,5 +640,7 @@ export const TEMPLATE_NAMES: Record<string, string> = {
   'swimlanes': 'Swimlanes',
   'kanban': 'Kanban Board',
   'fullstack-api': 'Full-Stack API',
+  'graphql-federation': 'GraphQL Federation',
+  'graphql-api': 'GraphQL API',
   'blank': 'Blank Canvas',
 };

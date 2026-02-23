@@ -13,6 +13,10 @@ const TEMPLATES = [
     { name: 'event-driven', title: 'Event-Driven', desc: 'Producers, Kafka topics, consumers, and analytics pipeline', badge: 'Async', accent: 'orange', preview: '⚡ 📨 📨 ⚙️ 📊' },
     { name: 'fullstack-api', title: 'Full-Stack API', desc: 'Client, Server & Data layers in groups with DevOps observability', badge: 'Groups', accent: 'purple', preview: '🖥️ ⚙️ 🗄️ 📊' },
   ]},
+  { category: 'GraphQL & Federation', items: [
+    { name: 'graphql-api', title: 'GraphQL API', desc: 'Single endpoint with resolvers, auth, subscriptions & file uploads', badge: 'GraphQL', accent: 'pink', preview: '◈ ⚙️ 🔐 ⚡' },
+    { name: 'graphql-federation', title: 'Supergraph Federation', desc: 'Apollo-style federated subgraphs composed into a unified supergraph', badge: 'Federation', accent: 'purple', preview: '◉ ◇ ◇ ◇ ◇' },
+  ]},
   { category: 'Cloud & DevOps', items: [
     { name: 'serverless', title: 'Serverless', desc: 'CDN, API Gateway, Lambda functions, DynamoDB, S3', badge: 'Cloud', accent: 'cyan', preview: '🌍 🚪 ⚡ ⚡ 📦' },
     { name: 'cicd', title: 'CI/CD Pipeline', desc: 'Git, Build, Test, Deploy stages with monitoring', badge: 'DevOps', accent: 'green', preview: '📝 ⚙️ 🔍 📦 📊' },

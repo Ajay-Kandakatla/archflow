@@ -149,6 +149,52 @@ function AuthIcon({ size = 18 }: IconProps) {
   );
 }
 
+// --- GraphQL ---
+
+function GraphqlIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      {/* Hexagon outline */}
+      <path d="M9 1.5 L15 5 L15 12.5 L9 16 L3 12.5 L3 5 Z" />
+      {/* Inner "G" stylized */}
+      <circle cx="9" cy="9" r="3.5" fill="none" strokeWidth="1.5" />
+      <line x1="9" y1="9" x2="12.5" y2="9" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function SupergraphIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      {/* Outer ring = supergraph */}
+      <circle cx="9" cy="9" r="7" strokeWidth="1.8" />
+      {/* Three inner nodes = subgraphs */}
+      <circle cx="9" cy="5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="5.5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12.5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      {/* Lines connecting them */}
+      <line x1="9" y1="6.5" x2="5.5" y2="10.5" />
+      <line x1="9" y1="6.5" x2="12.5" y2="10.5" />
+      <line x1="5.5" y1="12" x2="12.5" y2="12" />
+    </svg>
+  );
+}
+
+function SubgraphIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+      {/* Dashed circle = part of a larger graph */}
+      <circle cx="9" cy="9" r="6.5" strokeDasharray="3 2" />
+      {/* Central node */}
+      <circle cx="9" cy="9" r="2" fill="currentColor" stroke="none" />
+      {/* Connections radiating out */}
+      <line x1="9" y1="7" x2="9" y2="3.5" />
+      <line x1="10.8" y1="10" x2="14" y2="12.5" />
+      <line x1="7.2" y1="10" x2="4" y2="12.5" />
+    </svg>
+  );
+}
+
 // --- Database / Storage ---
 
 function PostgresIcon({ size = 18 }: IconProps) {
@@ -303,6 +349,10 @@ const NODE_TYPE_ICONS: Record<string, React.FC<IconProps>> = {
   'microservice': MicroserviceIcon,
   'serverless': ServerlessIcon,
   'auth': AuthIcon,
+  // GraphQL
+  'graphql': GraphqlIcon,
+  'supergraph': SupergraphIcon,
+  'subgraph': SubgraphIcon,
   // Database / Storage
   'postgres': PostgresIcon,
   'mongodb': MongodbIcon,

@@ -20,6 +20,10 @@ export const CT: ComponentTypes = {
   'microservice':   { icon: '🧩', title: 'Microservice',   desc: 'Service module',          badge: 'Service',   color: 'purple' },
   'serverless':     { icon: '⚡',  title: 'Serverless',     desc: 'Lambda / function',       badge: 'FaaS',      color: 'purple' },
   'auth':           { icon: '🔐', title: 'Auth Service',   desc: 'Authentication',          badge: 'Security',  color: 'purple' },
+  // GraphQL
+  'graphql':        { icon: '◈', title: 'GraphQL API',    desc: 'Query endpoint',          badge: 'GraphQL',   color: 'pink' },
+  'supergraph':     { icon: '◉', title: 'Supergraph',     desc: 'Federated gateway',       badge: 'Federation', color: 'pink' },
+  'subgraph':       { icon: '◇', title: 'Subgraph',       desc: 'Federated service',       badge: 'Federation', color: 'purple' },
   // Database / Storage
   'postgres':       { icon: '🐘', title: 'PostgreSQL',     desc: 'Relational DB',           badge: 'SQL',       color: 'red' },
   'mongodb':        { icon: '🍃', title: 'MongoDB',        desc: 'Document DB',             badge: 'NoSQL',     color: 'red' },
@@ -126,6 +130,14 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
       { type: 'memcached', color: 'cyan' },
       { type: 'kafka', color: 'orange' },
       { type: 'rabbitmq', color: 'orange' },
+    ],
+  },
+  {
+    title: 'GraphQL',
+    items: [
+      { type: 'graphql', color: 'pink' },
+      { type: 'supergraph', color: 'pink' },
+      { type: 'subgraph', color: 'purple' },
     ],
   },
   {
