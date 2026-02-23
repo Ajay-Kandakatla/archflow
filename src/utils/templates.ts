@@ -267,6 +267,9 @@ export function getTemplateData(name: string): Partial<DiagramData> | null {
     case 'kanban':
       return buildKanbanTemplate();
 
+    case 'fullstack-api':
+      return buildFullStackApiTemplate();
+
     default:
       return null;
   }
@@ -349,6 +352,116 @@ function buildKanbanTemplate(): Partial<DiagramData> {
   };
 }
 
+function buildFullStackApiTemplate(): Partial<DiagramData> {
+  // Layout constants
+  const groupPad = 50; // inner padding for nodes inside groups
+  const nodeGapX = 210;
+  const nodeGapY = 140;
+
+  // ── Group 1: Client Side (blue) — top ─────────────────
+  const clientG = { x: 100, y: 80, w: 760, h: 280 };
+  // ── Group 2: Server Side (purple) — middle ────────────
+  const serverG = { x: 100, y: 420, w: 760, h: 480 };
+  // ── Group 3: Data Layer (red) — bottom ────────────────
+  const dataG   = { x: 100, y: 960, w: 760, h: 280 };
+  // ── Group 4: DevOps / Observability (pink) — right ────
+  const opsG    = { x: 940, y: 80, w: 280, h: 1160 };
+
+  const mk = (id: number, type: string, x: number, y: number, title?: string, desc?: string) => {
+    const ct = CT[type];
+    return {
+      id, type, x, y,
+      icon: ct.icon,
+      title: title || ct.title,
+      desc: desc || ct.desc,
+      badge: ct.badge,
+      color: ct.color,
+    };
+  };
+
+  // Node positions (manually placed inside groups)
+  const nodes: DiagramNode[] = [
+    // Client Side (group 1) — IDs 1-4
+    mk(1,  'browser',  clientG.x + groupPad,                   clientG.y + 70, 'Web App',        'React SPA'),
+    mk(2,  'mobile',   clientG.x + groupPad + nodeGapX,        clientG.y + 70, 'Mobile App',     'React Native'),
+    mk(3,  'desktop',  clientG.x + groupPad + nodeGapX * 2,    clientG.y + 70, 'Desktop App',    'Electron client'),
+
+    // Server Side (group 2) — IDs 4-10
+    mk(4,  'cdn',             serverG.x + groupPad,                   serverG.y + 60,  'CDN',             'Static assets'),
+    mk(5,  'load-balancer',   serverG.x + groupPad + nodeGapX,        serverG.y + 60,  'Load Balancer',   'Round-robin'),
+    mk(6,  'api-gateway',     serverG.x + groupPad + nodeGapX * 2,    serverG.y + 60,  'API Gateway',     'REST + GraphQL'),
+    mk(7,  'auth',            serverG.x + groupPad,                   serverG.y + 60 + nodeGapY, 'Auth Service', 'JWT + OAuth2'),
+    mk(8,  'server',          serverG.x + groupPad + nodeGapX,        serverG.y + 60 + nodeGapY, 'User Service', 'CRUD + profiles'),
+    mk(9,  'microservice',    serverG.x + groupPad + nodeGapX * 2,    serverG.y + 60 + nodeGapY, 'Order Service', 'Checkout flow'),
+    mk(10, 'serverless',      serverG.x + groupPad + nodeGapX,        serverG.y + 60 + nodeGapY * 2, 'Email Lambda', 'Notifications'),
+    mk(11, 'kafka',           serverG.x + groupPad + nodeGapX * 2,    serverG.y + 60 + nodeGapY * 2, 'Event Bus',    'Async events'),
+
+    // Data Layer (group 3) — IDs 12-15
+    mk(12, 'postgres',  dataG.x + groupPad,                  dataG.y + 70, 'Users DB',       'PostgreSQL'),
+    mk(13, 'mongodb',   dataG.x + groupPad + nodeGapX,       dataG.y + 70, 'Orders DB',      'MongoDB'),
+    mk(14, 'redis',     dataG.x + groupPad + nodeGapX * 2,   dataG.y + 70, 'Session Cache',  'Redis cluster'),
+    mk(15, 's3',        dataG.x + groupPad + nodeGapX * 2.5, dataG.y + 70, 'File Storage',   'S3 bucket'),
+
+    // DevOps (group 4) — IDs 16-18
+    mk(16, 'monitoring', opsG.x + 55, opsG.y + 70,  'Prometheus',   'Metrics & alerts'),
+    mk(17, 'logging',    opsG.x + 55, opsG.y + 70 + nodeGapY, 'ELK Stack', 'Log aggregation'),
+    mk(18, 'analytics',  opsG.x + 55, opsG.y + 70 + nodeGapY * 2, 'Grafana', 'Dashboards'),
+  ];
+
+  // Groups
+  const groups: any[] = [
+    { id: 1, ...clientG, width: clientG.w, height: clientG.h, color: 'blue',   title: '🖥️ Client Side',            childNodeIds: [1, 2, 3], childNoteIds: [] },
+    { id: 2, ...serverG, width: serverG.w, height: serverG.h, color: 'purple', title: '⚙️ Server Side',            childNodeIds: [4, 5, 6, 7, 8, 9, 10, 11], childNoteIds: [] },
+    { id: 3, ...dataG,   width: dataG.w,   height: dataG.h,   color: 'red',    title: '🗄️ Data Layer',             childNodeIds: [12, 13, 14, 15], childNoteIds: [] },
+    { id: 4, ...opsG,    width: opsG.w,    height: opsG.h,    color: 'pink',   title: '📊 DevOps & Observability', childNodeIds: [16, 17, 18], childNoteIds: [] },
+  ];
+
+  // Connections (using node IDs)
+  const connections: Connection[] = [
+    // Clients → Server group
+    { id: 1,  from: 1, fromPort: 'bottom', to: 5, toPort: 'top', color: 'blue',   label: 'HTTPS',       direction: 'forward' as const },
+    { id: 2,  from: 2, fromPort: 'bottom', to: 5, toPort: 'top', color: 'blue',   label: 'HTTPS',       direction: 'forward' as const },
+    { id: 3,  from: 3, fromPort: 'bottom', to: 6, toPort: 'top', color: 'blue',   label: 'API Call',    direction: 'forward' as const },
+    { id: 4,  from: 1, fromPort: 'bottom', to: 4, toPort: 'top', color: 'green',  label: 'Static',      direction: 'forward' as const },
+    // Inside server group
+    { id: 5,  from: 5, fromPort: 'right',  to: 6, toPort: 'left', color: 'green',  label: 'Route',       direction: 'forward' as const },
+    { id: 6,  from: 6, fromPort: 'bottom', to: 7, toPort: 'top',  color: 'purple', label: 'Auth Check',  direction: 'bidirectional' as const },
+    { id: 7,  from: 6, fromPort: 'bottom', to: 8, toPort: 'top',  color: 'purple', label: 'REST API',    direction: 'forward' as const },
+    { id: 8,  from: 6, fromPort: 'bottom', to: 9, toPort: 'top',  color: 'purple', label: 'gRPC',        direction: 'forward' as const },
+    { id: 9,  from: 9, fromPort: 'bottom', to: 11, toPort: 'top', color: 'orange', label: 'Publish',     direction: 'forward' as const },
+    { id: 10, from: 11, fromPort: 'left',  to: 10, toPort: 'right', color: 'orange', label: 'Trigger',   direction: 'forward' as const },
+    // Server → Data layer
+    { id: 11, from: 8,  fromPort: 'bottom', to: 12, toPort: 'top', color: 'red',   label: 'SQL Query',   direction: 'forward' as const },
+    { id: 12, from: 9,  fromPort: 'bottom', to: 13, toPort: 'top', color: 'red',   label: 'Documents',   direction: 'forward' as const },
+    { id: 13, from: 7,  fromPort: 'bottom', to: 14, toPort: 'top', color: 'cyan',  label: 'Sessions',    direction: 'bidirectional' as const },
+    { id: 14, from: 10, fromPort: 'bottom', to: 15, toPort: 'top', color: 'orange', label: 'Attachments', direction: 'forward' as const },
+    // DevOps connections (from services)
+    { id: 15, from: 6,  fromPort: 'right', to: 16, toPort: 'left', color: 'pink',  label: 'Metrics',     direction: 'forward' as const },
+    { id: 16, from: 8,  fromPort: 'right', to: 17, toPort: 'left', color: 'pink',  label: 'Logs',        direction: 'forward' as const },
+    { id: 17, from: 16, fromPort: 'bottom', to: 17, toPort: 'top', color: 'pink',  label: '',            direction: 'forward' as const },
+    { id: 18, from: 17, fromPort: 'bottom', to: 18, toPort: 'top', color: 'yellow', label: 'Visualize',  direction: 'forward' as const },
+  ];
+
+  // Sticky notes
+  const stickyNotes: StickyNote[] = [
+    { id: 1, x: 100, y: -40, color: 'yellow' as any, text: 'Full-Stack API Architecture\n\nClient, Server & Data layers grouped.\nDevOps on the right for observability.', width: 300, height: 100 },
+    { id: 2, x: 550, y: -40, color: 'blue' as any, text: 'Data Flow\n\nClients > LB > Gateway > Services > DB\nEvents via Kafka for async processing.', width: 280, height: 100 },
+  ];
+
+  return {
+    nodes,
+    connections,
+    stickyNotes,
+    canvasImages: [],
+    groups,
+    nodeIdCounter: 18,
+    connectionIdCounter: 18,
+    noteIdCounter: 2,
+    imageIdCounter: 0,
+    groupIdCounter: 4,
+  };
+}
+
 export const TEMPLATE_NAMES: Record<string, string> = {
   'persistent-db': 'Persistent Database',
   'microservices': 'Microservices',
@@ -360,5 +473,6 @@ export const TEMPLATE_NAMES: Record<string, string> = {
   'mind-map': 'Mind Map',
   'swimlanes': 'Swimlanes',
   'kanban': 'Kanban Board',
+  'fullstack-api': 'Full-Stack API',
   'blank': 'Blank Canvas',
 };

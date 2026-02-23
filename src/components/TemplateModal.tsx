@@ -11,6 +11,7 @@ const TEMPLATES = [
     { name: 'persistent-db', title: 'Persistent Database', desc: 'Full-stack with LB, API Gateway, cache, SQL & NoSQL databases', badge: 'Popular', accent: 'red', preview: '🌐 ⚖️ 🚪 ⚙️ 🐘' },
     { name: 'microservices', title: 'Microservices', desc: 'API Gateway with multiple services, each with its own database', badge: 'Architecture', accent: 'purple', preview: '🚪 🧩 🧩 🧩 📨' },
     { name: 'event-driven', title: 'Event-Driven', desc: 'Producers, Kafka topics, consumers, and analytics pipeline', badge: 'Async', accent: 'orange', preview: '⚡ 📨 📨 ⚙️ 📊' },
+    { name: 'fullstack-api', title: 'Full-Stack API', desc: 'Client, Server & Data layers in groups with DevOps observability', badge: 'Groups', accent: 'purple', preview: '🖥️ ⚙️ 🗄️ 📊' },
   ]},
   { category: 'Cloud & DevOps', items: [
     { name: 'serverless', title: 'Serverless', desc: 'CDN, API Gateway, Lambda functions, DynamoDB, S3', badge: 'Cloud', accent: 'cyan', preview: '🌍 🚪 ⚡ ⚡ 📦' },
