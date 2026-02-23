@@ -109,7 +109,20 @@ app.use(express.json({ limit: '10mb' }));
 const fs = require('fs');
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  // Hashed assets (JS/CSS) — cache for 1 year (immutable, Vite adds content hashes)
+  app.use('/assets', express.static(path.join(distPath, 'assets'), {
+    maxAge: '1y',
+    immutable: true,
+  }));
+  // All other static files — no cache for HTML so browsers always get the latest
+  app.use(express.static(distPath, {
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  }));
 } else {
   app.use(express.static(path.join(__dirname, 'legacy')));
 }
@@ -651,6 +664,7 @@ app.get('*', (req, res) => {
   // Serve from dist/ (Vite build) if it exists, otherwise legacy/
   const distIndex = path.join(__dirname, 'dist', 'index.html');
   if (fs.existsSync(distIndex)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(distIndex);
   } else {
     res.sendFile(path.join(__dirname, 'legacy', 'index.html'));
