@@ -299,6 +299,42 @@ function getEndpointPosition(
   return getPortPosition(node, port as any, w, h);
 }
 
+/**
+ * Compute per-connection offsets so that connections sharing the same
+ * port pair don't overlap. Returns a map: connId → perpendicular offset in pixels.
+ */
+function computePortGroupOffsets(connections: Connection[]): Map<number, number> {
+  const offsets = new Map<number, number>();
+  // Group connections by their from/to port pair (undirected — both directions count)
+  const portGroups = new Map<string, number[]>();
+  for (const conn of connections) {
+    // Canonical key: sort the two endpoint keys so A→B and B→A share the same group
+    const keyA = `${conn.fromType || 'node'}-${conn.from}-${conn.fromPort}`;
+    const keyB = `${conn.toType || 'node'}-${conn.to}-${conn.toPort}`;
+    const groupKey = keyA < keyB ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
+    if (!portGroups.has(groupKey)) portGroups.set(groupKey, []);
+    portGroups.get(groupKey)!.push(conn.id);
+  }
+  // Also group by shared node pairs (different ports on same nodes)
+  const nodePairGroups = new Map<string, number[]>();
+  for (const conn of connections) {
+    const keyA = `${conn.fromType || 'node'}-${conn.from}`;
+    const keyB = `${conn.toType || 'node'}-${conn.to}`;
+    const pairKey = keyA < keyB ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
+    if (!nodePairGroups.has(pairKey)) nodePairGroups.set(pairKey, []);
+    nodePairGroups.get(pairKey)!.push(conn.id);
+  }
+  const SPREAD = 20; // pixels between overlapping connections
+  for (const [, ids] of nodePairGroups) {
+    if (ids.length <= 1) continue;
+    const half = (ids.length - 1) / 2;
+    for (let i = 0; i < ids.length; i++) {
+      offsets.set(ids[i], (i - half) * SPREAD);
+    }
+  }
+  return offsets;
+}
+
 export function ConnectionsSvg() {
   const { state, dispatch } = useDiagram();
   const { connections, nodes, stickyNotes } = state;
@@ -311,6 +347,9 @@ export function ConnectionsSvg() {
 
   // Use ADA-compliant darker colors for light theme
   const colorMap = state.theme === 'light' ? CV_LIGHT : CV;
+
+  // Compute offsets for overlapping connections
+  const portGroupOffsets = computePortGroupOffsets(connections);
 
   // Drag handler for orthogonal waypoint handles
   const handleWaypointMouseDown = useCallback((
@@ -728,9 +767,26 @@ export function ConnectionsSvg() {
         {connections.map(conn => {
           const fromType = conn.fromType || 'node';
           const toType = conn.toType || 'node';
-          const p1 = getEndpointPosition(conn.from, fromType, conn.fromPort, nodes, stickyNotes);
-          const p2 = getEndpointPosition(conn.to, toType, conn.toPort, nodes, stickyNotes);
+          let p1 = getEndpointPosition(conn.from, fromType, conn.fromPort, nodes, stickyNotes);
+          let p2 = getEndpointPosition(conn.to, toType, conn.toPort, nodes, stickyNotes);
           if (!p1 || !p2) return null;
+
+          // Apply perpendicular offset for overlapping connections
+          const groupOffset = portGroupOffsets.get(conn.id) || 0;
+          if (groupOffset !== 0) {
+            // Calculate perpendicular direction to the connection line
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len > 0) {
+              // Perpendicular unit vector (rotated 90 degrees)
+              const perpX = -dy / len;
+              const perpY = dx / len;
+              p1 = { x: p1.x + perpX * groupOffset, y: p1.y + perpY * groupOffset };
+              p2 = { x: p2.x + perpX * groupOffset, y: p2.y + perpY * groupOffset };
+            }
+          }
+
           const color = colorMap[conn.color] || '#4f8ff7';
           const dir = conn.direction || 'forward';
           const routing = conn.routing || 'bezier';

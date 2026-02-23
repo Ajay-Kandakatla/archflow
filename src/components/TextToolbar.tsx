@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDiagram } from '@/store/DiagramContext';
 import { CV, CV_LIGHT } from '@/store/constants';
-import type { TextFormatting, TextAlign, ListStyle, NodeColor } from '@/types';
+import type { TextFormatting, TextAlign, ListStyle, NodeColor, BorderStyle } from '@/types';
 
 const COLOR_ORDER: NodeColor[] = ['blue', 'green', 'purple', 'orange', 'red', 'cyan', 'pink', 'yellow'];
 const SIZE_PRESETS = [
@@ -51,8 +51,10 @@ export function TextToolbar() {
   const { state, dispatch } = useDiagram();
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showColorMenu, setShowColorMenu] = useState(false);
+  const [showNodeColorMenu, setShowNodeColorMenu] = useState(false);
   const sizeMenuRef = useRef<HTMLDivElement>(null);
   const colorMenuRef = useRef<HTMLDivElement>(null);
+  const nodeColorMenuRef = useRef<HTMLDivElement>(null);
 
   // Close menus on outside click
   useEffect(() => {
@@ -63,12 +65,15 @@ export function TextToolbar() {
       if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) {
         setShowColorMenu(false);
       }
+      if (nodeColorMenuRef.current && !nodeColorMenuRef.current.contains(e.target as Node)) {
+        setShowNodeColorMenu(false);
+      }
     };
-    if (showSizeMenu || showColorMenu) {
+    if (showSizeMenu || showColorMenu || showNodeColorMenu) {
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
     }
-  }, [showSizeMenu, showColorMenu]);
+  }, [showSizeMenu, showColorMenu, showNodeColorMenu]);
 
   // Determine what's selected
   const selectedNodeId = state.selectedNode;
@@ -165,6 +170,24 @@ export function TextToolbar() {
       updateText(addListPrefixes(cleanText, newStyle));
     }
     updateFormat({ listStyle: newStyle });
+  };
+
+  // Node color (border/accent color of the node itself)
+  const nodeColor: NodeColor = selectedNode ? selectedNode.color : 'blue';
+  const nodeBorderStyle: BorderStyle = selectedNode?.borderStyle || 'solid';
+
+  const setNodeColor = (color: NodeColor) => {
+    if (selectedNode) {
+      dispatch({ type: 'UPDATE_NODE_COLOR', payload: { id: selectedNode.id, color } });
+    }
+    setShowNodeColorMenu(false);
+  };
+
+  const toggleBorderStyle = () => {
+    if (selectedNode) {
+      const newStyle: BorderStyle = nodeBorderStyle === 'solid' ? 'dashed' : 'solid';
+      dispatch({ type: 'UPDATE_NODE_BORDER_STYLE', payload: { id: selectedNode.id, borderStyle: newStyle } });
+    }
   };
 
   const setTextColor = (color: string) => {
@@ -310,6 +333,55 @@ export function TextToolbar() {
       >
         <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '-0.5px' }}>{lineHeight}×</span>
       </button>
+
+      {/* Node Color (border/accent) — only for nodes */}
+      {selectedNode && (
+        <>
+          <div style={{ position: 'relative' }} ref={nodeColorMenuRef}>
+            <button
+              className="text-toolbar-btn"
+              onClick={() => setShowNodeColorMenu(!showNodeColorMenu)}
+              title="Node color"
+            >
+              <div style={{ width: 14, height: 14, borderRadius: 3, background: colorMap[nodeColor], border: '2px solid rgba(255,255,255,0.3)' }} />
+            </button>
+            {showNodeColorMenu && (
+              <div className="text-toolbar-color-menu">
+                {COLOR_ORDER.map(c => (
+                  <button
+                    key={c}
+                    className={`text-toolbar-color-swatch ${nodeColor === c ? 'active' : ''}`}
+                    style={{ background: colorMap[c] }}
+                    onClick={() => setNodeColor(c)}
+                    title={c}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Border Style Toggle */}
+          <button
+            className={`text-toolbar-btn ${nodeBorderStyle === 'dashed' ? 'active' : ''}`}
+            onClick={toggleBorderStyle}
+            title={`Border: ${nodeBorderStyle} (click to toggle)`}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+              {nodeBorderStyle === 'dashed' ? (
+                <>
+                  <line x1="0" y1="7" x2="3" y2="7" strokeDasharray="0" />
+                  <line x1="5" y1="7" x2="9" y2="7" strokeDasharray="0" />
+                  <line x1="11" y1="7" x2="14" y2="7" strokeDasharray="0" />
+                </>
+              ) : (
+                <line x1="0" y1="7" x2="14" y2="7" />
+              )}
+            </svg>
+          </button>
+
+          <div className="text-toolbar-divider" />
+        </>
+      )}
 
       {/* Text Color */}
       <div style={{ position: 'relative' }} ref={colorMenuRef}>

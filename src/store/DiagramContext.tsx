@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import type { DiagramNode, Connection, StickyNote, CanvasImage, GroupContainer, ToolMode, Theme, User, PortPosition, NodeColor, ConnectionRouting, TextFormatting, Waypoint } from '@/types';
+import type { DiagramNode, Connection, StickyNote, CanvasImage, GroupContainer, ToolMode, Theme, User, PortPosition, NodeColor, ConnectionRouting, TextFormatting, Waypoint, BorderStyle } from '@/types';
 import { CT, CV } from './constants';
 
 // Maximum undo history size
@@ -85,6 +85,8 @@ type DiagramAction =
   | { type: 'GROUP_SELECTED' }
   | { type: 'UNGROUP'; payload: number }
   | { type: 'UNDO' }
+  | { type: 'UPDATE_NODE_COLOR'; payload: { id: number; color: NodeColor } }
+  | { type: 'UPDATE_NODE_BORDER_STYLE'; payload: { id: number; borderStyle: BorderStyle } }
   | { type: 'UPDATE_NODE_FORMAT'; payload: { id: number; field: 'titleFormat' | 'descFormat'; format: TextFormatting } }
   | { type: 'UPDATE_NOTE_FORMAT'; payload: { id: number; format: TextFormatting } }
   | { type: 'SELECT_CONNECTION'; payload: number | null }
@@ -144,6 +146,10 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
       return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, desc: action.payload.desc } : n) };
     case 'UPDATE_NODE_FORMAT':
       return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, [action.payload.field]: { ...(n[action.payload.field] || {}), ...action.payload.format } } : n) };
+    case 'UPDATE_NODE_COLOR':
+      return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, color: action.payload.color } : n) };
+    case 'UPDATE_NODE_BORDER_STYLE':
+      return { ...state, nodes: state.nodes.map(n => n.id === action.payload.id ? { ...n, borderStyle: action.payload.borderStyle } : n) };
     case 'DELETE_NODE':
       return {
         ...state,

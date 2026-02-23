@@ -34,7 +34,15 @@ export function LoginOverlay({ googleClientId, onCredentialResponse }: LoginOver
   return (
     <div className="login-overlay" id="loginOverlay">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div className="logo-icon">⬡</div>
+        <div className="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" stroke="white" strokeWidth="2" fill="none"/>
+            <circle cx="16" cy="13" r="2.5" fill="white"/>
+            <line x1="16" y1="15.5" x2="16" y2="22" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="12" y1="18" x2="16" y2="15.5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+            <line x1="20" y1="18" x2="16" y2="15.5" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </div>
         <span className="logo">ArchFlow</span>
       </div>
       <div className="login-overlay-box">

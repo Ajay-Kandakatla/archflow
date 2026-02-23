@@ -157,6 +157,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     ...(node.width ? { width: node.width } : {}),
     ...(node.height ? { height: node.height } : {}),
     ...(zIndex !== undefined ? { zIndex } : {}),
+    ...(node.borderStyle === 'dashed' ? { borderStyle: 'dashed' } : {}),
   };
 
   return (

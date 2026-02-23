@@ -17,6 +17,8 @@ export interface TextFormatting {
   textColor?: string;   // NodeColor key for text color override
 }
 
+export type BorderStyle = 'solid' | 'dashed';
+
 export interface DiagramNode {
   id: number;
   type: string;
@@ -29,6 +31,7 @@ export interface DiagramNode {
   desc: string;
   badge: string;
   color: NodeColor;
+  borderStyle?: BorderStyle;
   titleFormat?: TextFormatting;
   descFormat?: TextFormatting;
 }

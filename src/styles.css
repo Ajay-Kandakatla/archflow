@@ -189,7 +189,7 @@ body {
     cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;
 }
 .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-.btn-save { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); }
+.btn-save { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
 .btn-export { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
 
 /* ============================================ */
@@ -1093,23 +1093,24 @@ body {
     box-shadow: 0 0 0 2px var(--accent-blue), 0 0 20px rgba(107,159,219,0.15);
 }
 
-/* AI Panel — Eraser.io-style */
-.ai-panel-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-    z-index: 10000; display: flex; align-items: center; justify-content: center;
+/* AI Panel — Right-side panel */
+.ai-panel-side {
+    position: fixed; top: 52px; right: 0; bottom: 0;
+    z-index: 10000; display: flex; align-items: stretch; justify-content: flex-end;
     animation: aiFadeIn 0.2s ease;
+    pointer-events: none;
 }
+.ai-panel-side > * { pointer-events: auto; }
 @keyframes aiFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes aiSlideUp { from { transform: translateY(20px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes aiSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 .ai-panel {
-    width: 580px; max-width: 92vw; max-height: 85vh;
-    background: var(--bg-sidebar); border: 1px solid var(--border-color);
-    border-radius: 20px; display: flex; flex-direction: column;
-    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    width: 400px; max-width: 92vw; height: 100%;
+    background: var(--bg-sidebar); border-left: 1px solid var(--border-color);
+    border-radius: 0; display: flex; flex-direction: column;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.3);
     overflow: hidden;
-    animation: aiSlideUp 0.25s ease;
+    animation: aiSlideIn 0.25s ease;
 }
 
 /* Header */
@@ -1223,8 +1224,7 @@ body {
 @keyframes aiSpin { to { transform: rotate(360deg); } }
 
 /* Light theme overrides for AI panel */
-[data-theme="light"] .ai-panel-overlay { background: rgba(0,0,0,0.3); }
-[data-theme="light"] .ai-panel { box-shadow: 0 24px 80px rgba(0,0,0,0.15); }
+[data-theme="light"] .ai-panel { box-shadow: -8px 0 30px rgba(0,0,0,0.1); }
 [data-theme="light"] .ai-panel-chip:hover { background: rgba(37,99,235,0.06); }
 [data-theme="light"] .ai-panel-result.success { background: rgba(5,150,105,0.08); border-color: rgba(5,150,105,0.2); }
 [data-theme="light"] .ai-panel-result.error { background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.2); }
@@ -1649,14 +1649,14 @@ body {
 
 /* Share button in topbar */
 .btn-share {
-    background: var(--accent-blue) !important; color: white !important;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) !important; color: white !important;
     font-weight: 600;
 }
 .btn-share:hover { opacity: 0.9; }
 
 /* Sign-in button for read-only viewers */
 .btn-signin {
-    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)) !important;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)) !important;
     color: white !important;
     font-weight: 600;
     text-decoration: none;
@@ -1666,7 +1666,7 @@ body {
 .btn-signin:hover { opacity: 0.9; }
 
 /* Templates button */
-.btn-templates { background: linear-gradient(135deg, var(--accent-orange), var(--accent-red)); }
+.btn-templates { background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink)); }
 
 /* Light theme overrides */
 [data-theme="light"] .share-modal { box-shadow: 0 24px 48px rgba(0,0,0,0.15); }

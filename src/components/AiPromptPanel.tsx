@@ -770,17 +770,21 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: dt.name } });
         setLastResult(`Generated "${dt.name}" — ${data.nodes.length} components, ${data.connections.length} connections`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
+        // Auto-close panel after successful generation so user can see the diagram
+        setTimeout(() => onClose(), 800);
       } else if (parsed.template) {
         const tmpl = ARCH_TEMPLATES[parsed.template];
         const data = tmpl.generate();
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: tmpl.description } });
         setLastResult(`Generated "${tmpl.description}" — ${data.nodes.length} components, ${data.connections.length} connections`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
+        setTimeout(() => onClose(), 800);
       } else if (parsed.nodes.length > 0) {
         const data = layoutNodes(parsed.nodes);
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: 'AI Generated Diagram' } });
         setLastResult(`Generated diagram with ${parsed.nodes.length} components`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
+        setTimeout(() => onClose(), 800);
       } else {
         setLastResult('Could not match your description. Try using industry terms or technology names.');
       }
@@ -804,7 +808,7 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
   if (!visible) return null;
 
   return (
-    <div className="ai-panel-overlay" onClick={(e) => { if ((e.target as HTMLElement).classList.contains('ai-panel-overlay')) onClose(); }}>
+    <div className="ai-panel-side" onClick={(e) => { if ((e.target as HTMLElement).classList.contains('ai-panel-side')) onClose(); }}>
       <div className="ai-panel">
         {/* Header */}
         <div className="ai-panel-header">
