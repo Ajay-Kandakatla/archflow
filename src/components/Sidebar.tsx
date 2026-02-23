@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { CT, SIDEBAR_SECTIONS, WIREFRAME_SHAPES } from '@/store/constants';
+import React, { useState, useMemo } from 'react';
+import { CT, SIDEBAR_SECTIONS, WIREFRAME_SECTIONS, ICON_NODE_TYPE } from '@/store/constants';
 import { NodeIcon } from '@/components/NodeIcon';
+import { ICON_CATEGORIES, ALL_ICONS, renderIcon } from '@/components/IconLibrary';
 
 interface SidebarProps {
-  onClickAdd: (type: string) => void;
+  onClickAdd: (type: string, extra?: { iconSvg?: string; iconName?: string }) => void;
   onClickAddGroup: (color: string) => void;
   panelOpen?: string | null;
   onTabChange?: (tabId: string | null) => void;
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'system', icon: '🏗️', label: 'System Blocks', sections: [0, 1, 2, 3, 4, 5, 6] },
   { id: 'shapes', icon: '◇', label: 'Shapes', sections: [] as number[] },
   { id: 'wireframe', icon: '📐', label: 'Wireframe', sections: [] as number[] },
+  { id: 'icons', icon: '⬡', label: 'Icons', sections: [] as number[] },
   { id: 'groups', icon: '▢', label: 'Groups', sections: [] as number[] },
   { id: 'notes', icon: '📝', label: 'Notes', sections: [] as number[] },
   { id: 'connectors', icon: '⤷', label: 'Connectors', sections: [] as number[] },
@@ -53,6 +55,13 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
   // Use controlled state if parent provides it, else local
   const [localTab, setLocalTab] = useState<string | null>(null);
   const activeTab = panelOpen !== undefined ? panelOpen : localTab;
+  const [iconSearch, setIconSearch] = useState('');
+
+  const filteredIcons = useMemo(() => {
+    if (!iconSearch.trim()) return null;
+    const q = iconSearch.toLowerCase();
+    return ALL_ICONS.filter(icon => icon.name.toLowerCase().includes(q));
+  }, [iconSearch]);
 
   const handleDragStart = (e: React.DragEvent, type: string) => {
     e.dataTransfer.setData('componentType', type);
@@ -78,6 +87,7 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
       case 'system': return 'S';
       case 'shapes': return 'D';
       case 'wireframe': return 'W';
+      case 'icons': return 'I';
       case 'groups': return 'G';
       case 'notes': return 'N';
       case 'connectors': return 'C';
@@ -141,24 +151,83 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
 
       case 'wireframe':
         return (
-          <div className="sidebar-section">
-            <div className="sidebar-title">Wireframe Elements</div>
-            <div className="component-grid">
-              {WIREFRAME_SHAPES.map(shape => (
-                <div
-                  key={shape.type}
-                  className="component-item"
-                  data-type={shape.type}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, shape.type)}
-                  onClick={() => onClickAdd(shape.type)}
-                >
-                  <span className="component-icon"><NodeIcon type={shape.type} size={24} /></span>
-                  <span className="component-name">{shape.label}</span>
+          <>
+            {WIREFRAME_SECTIONS.map(section => (
+              <div className="sidebar-section" key={section.title}>
+                <div className="sidebar-title">{section.title}</div>
+                <div className="component-grid">
+                  {section.items.map(shape => (
+                    <div
+                      key={shape.type}
+                      className="component-item"
+                      data-type={shape.type}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, shape.type)}
+                      onClick={() => onClickAdd(shape.type)}
+                    >
+                      <span className="component-icon"><NodeIcon type={shape.type} size={24} /></span>
+                      <span className="component-name">{shape.label}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            ))}
+          </>
+        );
+
+      case 'icons':
+        return (
+          <>
+            <div className="sidebar-section">
+              <input
+                className="icon-search-input"
+                type="text"
+                placeholder="Search icons..."
+                value={iconSearch}
+                onChange={(e) => setIconSearch(e.target.value)}
+              />
             </div>
-          </div>
+            {filteredIcons ? (
+              <div className="sidebar-section">
+                <div className="sidebar-title">Results ({filteredIcons.length})</div>
+                <div className="icon-grid">
+                  {filteredIcons.map(icon => (
+                    <div
+                      key={icon.name}
+                      className="icon-grid-item"
+                      title={icon.name}
+                      onClick={() => onClickAdd(ICON_NODE_TYPE, { iconSvg: icon.svg, iconName: icon.name })}
+                    >
+                      {renderIcon(icon.svg, 22)}
+                    </div>
+                  ))}
+                  {filteredIcons.length === 0 && (
+                    <div className="sidebar-help-text" style={{ gridColumn: '1 / -1' }}>
+                      <p>No icons found</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              ICON_CATEGORIES.map(cat => (
+                <div className="sidebar-section" key={cat.label}>
+                  <div className="sidebar-title">{cat.label}</div>
+                  <div className="icon-grid">
+                    {cat.icons.map(icon => (
+                      <div
+                        key={icon.name}
+                        className="icon-grid-item"
+                        title={icon.name}
+                        onClick={() => onClickAdd(ICON_NODE_TYPE, { iconSvg: icon.svg, iconName: icon.name })}
+                      >
+                        {renderIcon(icon.svg, 22)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </>
         );
 
       case 'groups':

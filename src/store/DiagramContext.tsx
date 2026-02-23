@@ -36,7 +36,7 @@ interface DiagramState {
 
 // Action types
 type DiagramAction =
-  | { type: 'ADD_NODE'; payload: { nodeType: string; x: number; y: number } }
+  | { type: 'ADD_NODE'; payload: { nodeType: string; x: number; y: number; iconSvg?: string; iconName?: string } }
   | { type: 'MOVE_NODE'; payload: { id: number; x: number; y: number } }
   | { type: 'RESIZE_NODE'; payload: { id: number; x: number; y: number; width: number; height: number } }
   | { type: 'UPDATE_NODE_TITLE'; payload: { id: number; title: string } }
@@ -134,7 +134,7 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
       if (!ct) return state;
       const id = state.nodeIdCounter + 1;
       const dims = DEFAULT_DIMENSIONS[action.payload.nodeType];
-      const node: DiagramNode = { id, type: action.payload.nodeType, x: action.payload.x, y: action.payload.y, ...ct, ...(dims ? { width: dims.width, height: dims.height } : {}) };
+      const node: DiagramNode = { id, type: action.payload.nodeType, x: action.payload.x, y: action.payload.y, ...ct, ...(dims ? { width: dims.width, height: dims.height } : {}), ...(action.payload.iconSvg ? { iconSvg: action.payload.iconSvg, iconName: action.payload.iconName, title: action.payload.iconName || 'Icon' } : {}) };
       return { ...state, nodes: [...state.nodes, node], nodeIdCounter: id };
     }
     case 'MOVE_NODE':

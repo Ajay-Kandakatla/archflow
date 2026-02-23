@@ -59,6 +59,23 @@ export const CT: ComponentTypes = {
   'wf-divider':     { icon: '',  title: 'Divider',        desc: '',                        badge: '',          color: 'blue' },
   'wf-header':      { icon: '',  title: 'Header',         desc: '',                        badge: '',          color: 'blue' },
   'wf-dropdown':    { icon: '',  title: 'Dropdown',       desc: '',                        badge: '',          color: 'blue' },
+  'wf-checkbox':    { icon: '',  title: 'Checkbox',       desc: '',                        badge: '',          color: 'blue' },
+  'wf-radio':       { icon: '',  title: 'Radio',          desc: '',                        badge: '',          color: 'blue' },
+  'wf-toggle':      { icon: '',  title: 'Toggle',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-navbar':      { icon: '',  title: 'Navbar',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-table':       { icon: '',  title: 'Table',          desc: '',                        badge: '',          color: 'blue' },
+  'wf-avatar':      { icon: '',  title: 'Avatar',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-progress':    { icon: '',  title: 'Progress',       desc: '',                        badge: '',          color: 'blue' },
+  'wf-tabs':        { icon: '',  title: 'Tabs',           desc: '',                        badge: '',          color: 'blue' },
+  'wf-pagination':  { icon: '',  title: 'Pagination',     desc: '',                        badge: '',          color: 'blue' },
+  'wf-link':        { icon: '',  title: 'Link',           desc: '',                        badge: '',          color: 'blue' },
+  'wf-video':       { icon: '',  title: 'Video',          desc: '',                        badge: '',          color: 'blue' },
+  'wf-searchbar':   { icon: '',  title: 'Search Bar',     desc: '',                        badge: '',          color: 'blue' },
+  'wf-breadcrumb':  { icon: '',  title: 'Breadcrumb',     desc: '',                        badge: '',          color: 'blue' },
+  'wf-list':        { icon: '',  title: 'List',           desc: '',                        badge: '',          color: 'blue' },
+  'wf-rating':      { icon: '',  title: 'Rating',         desc: '',                        badge: '',          color: 'blue' },
+  // Icon Node (dynamically created with iconSvg data)
+  'icon-node':      { icon: '⬡',  title: 'Icon',          desc: '',                        badge: '',          color: 'blue' },
 };
 
 // ============================================
@@ -71,11 +88,22 @@ export const SHAPE_TYPES = new Set([
   'pill', 'cylinder', 'parallelogram',
 ]);
 
+/** Icon node type — renders as a centered SVG icon */
+export const ICON_NODE_TYPE = 'icon-node';
+
+export function isIconNode(type: string): boolean {
+  return type === ICON_NODE_TYPE;
+}
+
 /** Wireframe types that render as UI mockup elements */
 export const WIREFRAME_TYPES = new Set([
   'wf-button', 'wf-input', 'wf-text', 'wf-image',
   'wf-browser', 'wf-mobile', 'wf-card', 'wf-divider',
-  'wf-header', 'wf-dropdown',
+  'wf-header', 'wf-dropdown', 'wf-checkbox', 'wf-radio',
+  'wf-toggle', 'wf-navbar', 'wf-table', 'wf-avatar',
+  'wf-progress', 'wf-tabs', 'wf-pagination', 'wf-link',
+  'wf-video', 'wf-searchbar', 'wf-breadcrumb', 'wf-list',
+  'wf-rating',
 ]);
 
 export function isShapeType(type: string): boolean {
@@ -111,24 +139,84 @@ export const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number 
   'wf-divider':     { width: 200, height: 20 },
   'wf-header':      { width: 400, height: 48 },
   'wf-dropdown':    { width: 180, height: 44 },
+  'wf-checkbox':    { width: 160, height: 36 },
+  'wf-radio':       { width: 160, height: 36 },
+  'wf-toggle':      { width: 120, height: 36 },
+  'wf-navbar':      { width: 400, height: 50 },
+  'wf-table':       { width: 320, height: 200 },
+  'wf-avatar':      { width: 60, height: 60 },
+  'wf-progress':    { width: 200, height: 24 },
+  'wf-tabs':        { width: 320, height: 40 },
+  'wf-pagination':  { width: 260, height: 36 },
+  'wf-link':        { width: 100, height: 24 },
+  'wf-video':       { width: 320, height: 200 },
+  'wf-searchbar':   { width: 260, height: 40 },
+  'wf-breadcrumb':  { width: 240, height: 28 },
+  'wf-list':        { width: 220, height: 160 },
+  'wf-rating':      { width: 140, height: 28 },
+  // Icon node
+  'icon-node':      { width: 80, height: 80 },
 };
 
 // ============================================
 // Wireframe Sidebar Items
 // ============================================
 
-export const WIREFRAME_SHAPES = [
-  { type: 'wf-button',   label: 'Button' },
-  { type: 'wf-input',    label: 'Input' },
-  { type: 'wf-text',     label: 'Text' },
-  { type: 'wf-image',    label: 'Image' },
-  { type: 'wf-browser',  label: 'Browser' },
-  { type: 'wf-mobile',   label: 'Mobile' },
-  { type: 'wf-card',     label: 'Card' },
-  { type: 'wf-divider',  label: 'Divider' },
-  { type: 'wf-header',   label: 'Header' },
-  { type: 'wf-dropdown', label: 'Dropdown' },
+export interface WireframeSidebarSection {
+  title: string;
+  items: { type: string; label: string }[];
+}
+
+export const WIREFRAME_SECTIONS: WireframeSidebarSection[] = [
+  {
+    title: 'Form Elements',
+    items: [
+      { type: 'wf-button',   label: 'Button' },
+      { type: 'wf-input',    label: 'Input' },
+      { type: 'wf-dropdown', label: 'Dropdown' },
+      { type: 'wf-checkbox', label: 'Checkbox' },
+      { type: 'wf-radio',    label: 'Radio' },
+      { type: 'wf-toggle',   label: 'Toggle' },
+      { type: 'wf-searchbar', label: 'Search Bar' },
+    ],
+  },
+  {
+    title: 'Content',
+    items: [
+      { type: 'wf-text',     label: 'Text' },
+      { type: 'wf-header',   label: 'Header' },
+      { type: 'wf-image',    label: 'Image' },
+      { type: 'wf-video',    label: 'Video' },
+      { type: 'wf-card',     label: 'Card' },
+      { type: 'wf-list',     label: 'List' },
+      { type: 'wf-avatar',   label: 'Avatar' },
+      { type: 'wf-rating',   label: 'Rating' },
+    ],
+  },
+  {
+    title: 'Navigation',
+    items: [
+      { type: 'wf-navbar',      label: 'Navbar' },
+      { type: 'wf-tabs',        label: 'Tabs' },
+      { type: 'wf-breadcrumb',  label: 'Breadcrumb' },
+      { type: 'wf-pagination',  label: 'Pagination' },
+      { type: 'wf-link',        label: 'Link' },
+    ],
+  },
+  {
+    title: 'Layout',
+    items: [
+      { type: 'wf-browser',  label: 'Browser' },
+      { type: 'wf-mobile',   label: 'Mobile' },
+      { type: 'wf-divider',  label: 'Divider' },
+      { type: 'wf-table',    label: 'Table' },
+      { type: 'wf-progress', label: 'Progress' },
+    ],
+  },
 ];
+
+// Flat list for backward compatibility
+export const WIREFRAME_SHAPES = WIREFRAME_SECTIONS.flatMap(s => s.items);
 
 // ============================================
 // Color Hex Values

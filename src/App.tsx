@@ -306,7 +306,7 @@ function AppInner() {
   }, [state.authToken, dispatch]);
 
   // Click sidebar item to place at viewport center (with stacking offset)
-  const handleClickAddNode = useCallback((type: string) => {
+  const handleClickAddNode = useCallback((type: string, extra?: { iconSvg?: string; iconName?: string }) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const cx = (rect.width / 2 - state.panX) / state.scale;
@@ -321,7 +321,7 @@ function AppInner() {
       return;
     }
 
-    dispatch({ type: 'ADD_NODE', payload: { nodeType: type, x: cx - 85 + offset, y: cy - 45 + offset } });
+    dispatch({ type: 'ADD_NODE', payload: { nodeType: type, x: cx - 85 + offset, y: cy - 45 + offset, ...extra } });
   }, [state.panX, state.panY, state.scale, dispatch]);
 
   const handleClickAddGroup = useCallback((color: string) => {

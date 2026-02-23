@@ -428,6 +428,158 @@ function WfDropdownIcon({ size = 18 }: IconProps) {
   );
 }
 
+// --- New Wireframe Icons ---
+
+function WfCheckboxIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="12" height="12" rx="2" />
+      <polyline points="6 9 8 11 12 7" />
+    </svg>
+  );
+}
+
+function WfRadioIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="9" r="6" />
+      <circle cx="9" cy="9" r="2.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function WfToggleIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="14" height="8" rx="4" />
+      <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function WfNavbarIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="16" height="10" rx="1.5" />
+      <line x1="5" y1="4" x2="5" y2="14" opacity="0.3" />
+      <line x1="8" y1="9" x2="10" y2="9" /><line x1="11" y1="9" x2="13" y2="9" /><line x1="14" y1="9" x2="16" y2="9" />
+    </svg>
+  );
+}
+
+function WfTableIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="14" height="14" rx="1.5" />
+      <line x1="2" y1="6" x2="16" y2="6" />
+      <line x1="2" y1="10" x2="16" y2="10" />
+      <line x1="7" y1="2" x2="7" y2="16" />
+      <line x1="12" y1="2" x2="12" y2="16" />
+    </svg>
+  );
+}
+
+function WfAvatarIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="9" r="7" />
+      <circle cx="9" cy="7" r="2.5" />
+      <path d="M4 15a5 5 0 0 1 10 0" />
+    </svg>
+  );
+}
+
+function WfProgressIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="14" height="4" rx="2" />
+      <rect x="2" y="7" width="9" height="4" rx="2" fill="currentColor" opacity="0.3" />
+    </svg>
+  );
+}
+
+function WfTabsIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="5" width="5" height="4" rx="1" fill="currentColor" opacity="0.2" />
+      <rect x="7" y="5" width="5" height="4" rx="1" />
+      <rect x="13" y="5" width="4" height="4" rx="1" />
+      <line x1="1" y1="9" x2="17" y2="9" />
+      <rect x="1" y="9" width="16" height="5" rx="0" />
+    </svg>
+  );
+}
+
+function WfPaginationIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="6" width="4" height="6" rx="1" />
+      <rect x="6" y="6" width="4" height="6" rx="1" fill="currentColor" opacity="0.2" />
+      <rect x="11" y="6" width="4" height="6" rx="1" />
+    </svg>
+  );
+}
+
+function WfLinkIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7.5 10.5a3.5 3.5 0 0 0 5 0l2-2a3.5 3.5 0 0 0-5-5l-1 1" />
+      <path d="M10.5 7.5a3.5 3.5 0 0 0-5 0l-2 2a3.5 3.5 0 0 0 5 5l1-1" />
+    </svg>
+  );
+}
+
+function WfVideoIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="14" height="12" rx="2" />
+      <polygon points="7,6 7,12 12,9" fill="currentColor" opacity="0.3" />
+    </svg>
+  );
+}
+
+function WfSearchbarIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="14" height="8" rx="4" />
+      <circle cx="7" cy="9" r="2" />
+      <line x1="8.5" y1="10.5" x2="10" y2="12" />
+    </svg>
+  );
+}
+
+function WfBreadcrumbIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2" y1="9" x2="4" y2="9" /><path d="M5 7l2 2-2 2" />
+      <line x1="8" y1="9" x2="10" y2="9" /><path d="M11 7l2 2-2 2" />
+      <line x1="14" y1="9" x2="16" y2="9" />
+    </svg>
+  );
+}
+
+function WfListIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="4" cy="5" r="1" fill="currentColor" stroke="none" />
+      <line x1="7" y1="5" x2="15" y2="5" />
+      <circle cx="4" cy="9" r="1" fill="currentColor" stroke="none" />
+      <line x1="7" y1="9" x2="15" y2="9" />
+      <circle cx="4" cy="13" r="1" fill="currentColor" stroke="none" />
+      <line x1="7" y1="13" x2="15" y2="13" />
+    </svg>
+  );
+}
+
+function WfRatingIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="5,2 6,5 9,5 7,7 8,10 5,8 2,10 3,7 1,5 4,5" fill="currentColor" opacity="0.3" />
+      <polygon points="13,2 14,5 17,5 15,7 16,10 13,8 10,10 11,7 9,5 12,5" />
+    </svg>
+  );
+}
+
 // ============================================
 // Type → Icon Map
 // ============================================
@@ -478,6 +630,21 @@ const NODE_TYPE_ICONS: Record<string, React.FC<IconProps>> = {
   'wf-divider': WfDividerIcon,
   'wf-header': WfHeaderIcon,
   'wf-dropdown': WfDropdownIcon,
+  'wf-checkbox': WfCheckboxIcon,
+  'wf-radio': WfRadioIcon,
+  'wf-toggle': WfToggleIcon,
+  'wf-navbar': WfNavbarIcon,
+  'wf-table': WfTableIcon,
+  'wf-avatar': WfAvatarIcon,
+  'wf-progress': WfProgressIcon,
+  'wf-tabs': WfTabsIcon,
+  'wf-pagination': WfPaginationIcon,
+  'wf-link': WfLinkIcon,
+  'wf-video': WfVideoIcon,
+  'wf-searchbar': WfSearchbarIcon,
+  'wf-breadcrumb': WfBreadcrumbIcon,
+  'wf-list': WfListIcon,
+  'wf-rating': WfRatingIcon,
 };
 
 // ============================================

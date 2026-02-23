@@ -23,7 +23,7 @@ export async function setupApp(page: Page) {
   await hideLogin(page);
 }
 
-/** Open a specific sidebar tab by index (0=System, 1=Shapes, 2=Wireframe, 3=Groups, 4=Notes, 5=Connectors, 6=AI) */
+/** Open a specific sidebar tab by index (0=System, 1=Shapes, 2=Wireframe, 3=Icons, 4=Groups, 5=Notes, 6=Connectors, 7=AI) */
 export async function openSidebarTab(page: Page, tabIndex: number) {
   await page.locator('.sidebar-rail-btn').nth(tabIndex).click();
   await page.waitForTimeout(300);
@@ -53,7 +53,7 @@ export async function placeWireframe(page: Page, wfType: string) {
 
 /** Place a group on the canvas by color */
 export async function placeGroup(page: Page, color: string) {
-  await openSidebarTab(page, 3); // Groups tab
+  await openSidebarTab(page, 4); // Groups tab
   await page.locator(`.component-item[data-color="${color}"]`).first().click();
   await page.waitForTimeout(300);
 }

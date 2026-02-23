@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import type { DiagramNode, PortPosition, NodeColor, TextFormatting } from '@/types';
 import { useDiagram } from '@/store/DiagramContext';
-import { CV, CV_LIGHT, isShapeType, isWireframeType } from '@/store/constants';
+import { CV, CV_LIGHT, isShapeType, isWireframeType, isIconNode } from '@/store/constants';
 import { screenToCanvas } from '@/utils/canvas';
 import { computeSnap } from '@/utils/snap';
 import { NodeIcon } from '@/components/NodeIcon';
@@ -141,6 +141,137 @@ function WireframeContent({ node, dispatch, theme }: { node: DiagramNode; dispat
           </div>
         </div>
       );
+    case 'wf-checkbox':
+      return (
+        <div className="wf-checkbox-inner">
+          <span className="wf-checkbox-box">✓</span>
+          <span className="wf-checkbox-label">{node.title || 'Checkbox'}</span>
+        </div>
+      );
+    case 'wf-radio':
+      return (
+        <div className="wf-radio-inner">
+          <span className="wf-radio-circle"><span className="wf-radio-dot" /></span>
+          <span className="wf-radio-label">{node.title || 'Option'}</span>
+        </div>
+      );
+    case 'wf-toggle':
+      return (
+        <div className="wf-toggle-inner">
+          <div className="wf-toggle-track">
+            <div className="wf-toggle-thumb" />
+          </div>
+          <span className="wf-toggle-label">{node.title || 'Toggle'}</span>
+        </div>
+      );
+    case 'wf-navbar':
+      return (
+        <div className="wf-navbar-inner">
+          <span className="wf-navbar-brand">Brand</span>
+          <div className="wf-navbar-links">
+            <span>Home</span><span>Features</span><span>Pricing</span><span>About</span>
+          </div>
+          <span className="wf-navbar-cta">Sign Up</span>
+        </div>
+      );
+    case 'wf-table':
+      return (
+        <div className="wf-table-inner">
+          <div className="wf-table-row wf-table-head">
+            <span>Column 1</span><span>Column 2</span><span>Column 3</span>
+          </div>
+          <div className="wf-table-row"><span>Data</span><span>Data</span><span>Data</span></div>
+          <div className="wf-table-row"><span>Data</span><span>Data</span><span>Data</span></div>
+          <div className="wf-table-row"><span>Data</span><span>Data</span><span>Data</span></div>
+        </div>
+      );
+    case 'wf-avatar':
+      return (
+        <div className="wf-avatar-inner">
+          <svg viewBox="0 0 40 40" className="wf-avatar-svg">
+            <circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" strokeWidth="1" />
+            <circle cx="20" cy="15" r="6" fill="currentColor" opacity="0.3" />
+            <path d="M8 36a12 12 0 0 1 24 0" fill="currentColor" opacity="0.2" />
+          </svg>
+        </div>
+      );
+    case 'wf-progress':
+      return (
+        <div className="wf-progress-inner">
+          <div className="wf-progress-track">
+            <div className="wf-progress-fill" style={{ width: '65%' }} />
+          </div>
+        </div>
+      );
+    case 'wf-tabs':
+      return (
+        <div className="wf-tabs-inner">
+          <span className="wf-tab active">Tab 1</span>
+          <span className="wf-tab">Tab 2</span>
+          <span className="wf-tab">Tab 3</span>
+        </div>
+      );
+    case 'wf-pagination':
+      return (
+        <div className="wf-pagination-inner">
+          <span className="wf-page-btn">‹</span>
+          <span className="wf-page-btn active">1</span>
+          <span className="wf-page-btn">2</span>
+          <span className="wf-page-btn">3</span>
+          <span className="wf-page-dots">…</span>
+          <span className="wf-page-btn">10</span>
+          <span className="wf-page-btn">›</span>
+        </div>
+      );
+    case 'wf-link':
+      return (
+        <div className="wf-link-inner">
+          <span className="wf-link-text">{node.title || 'Link text'}</span>
+        </div>
+      );
+    case 'wf-video':
+      return (
+        <div className="wf-video-inner">
+          <svg viewBox="0 0 100 70" className="wf-video-placeholder" preserveAspectRatio="xMidYMid meet">
+            <rect x="1" y="1" width="98" height="68" fill="none" stroke="currentColor" strokeWidth="1" rx="2" />
+            <polygon points="40,20 40,50 65,35" fill="currentColor" opacity="0.4" />
+          </svg>
+        </div>
+      );
+    case 'wf-searchbar':
+      return (
+        <div className="wf-searchbar-inner">
+          <span className="wf-searchbar-icon">🔍</span>
+          <span className="wf-searchbar-placeholder">Search...</span>
+        </div>
+      );
+    case 'wf-breadcrumb':
+      return (
+        <div className="wf-breadcrumb-inner">
+          <span>Home</span><span className="wf-breadcrumb-sep">/</span>
+          <span>Products</span><span className="wf-breadcrumb-sep">/</span>
+          <span className="wf-breadcrumb-current">Details</span>
+        </div>
+      );
+    case 'wf-list':
+      return (
+        <div className="wf-list-inner">
+          <div className="wf-list-item"><span className="wf-list-bullet" />List item 1</div>
+          <div className="wf-list-item"><span className="wf-list-bullet" />List item 2</div>
+          <div className="wf-list-item"><span className="wf-list-bullet" />List item 3</div>
+          <div className="wf-list-item"><span className="wf-list-bullet" />List item 4</div>
+        </div>
+      );
+    case 'wf-rating':
+      return (
+        <div className="wf-rating-inner">
+          <span className="wf-star filled">★</span>
+          <span className="wf-star filled">★</span>
+          <span className="wf-star filled">★</span>
+          <span className="wf-star filled">★</span>
+          <span className="wf-star">★</span>
+        </div>
+      );
     default:
       return <div className="wf-default">{node.title}</div>;
   }
@@ -167,6 +298,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
 
   const isShape = isShapeType(node.type);
   const isWireframe = isWireframeType(node.type);
+  const isIcon = isIconNode(node.type);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -302,6 +434,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     isMultiSelected ? 'multi-selected' : '',
     isShape ? 'shape-node' : '',
     isWireframe ? 'wireframe-node' : '',
+    isIcon ? 'icon-node' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -335,7 +468,16 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
       )}
 
       {/* === VISUAL CONTENT — differs by category === */}
-      {isShape ? (
+      {isIcon ? (
+        <div className="icon-node-content">
+          {node.iconSvg && (
+            <svg className="icon-node-svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              dangerouslySetInnerHTML={{ __html: node.iconSvg }} />
+          )}
+          <span className="icon-node-label">{node.iconName || node.title}</span>
+        </div>
+      ) : isShape ? (
         <>
           <svg className="shape-bg" viewBox="0 0 100 100" preserveAspectRatio="none">
             {getShapeSVG(node.type)}

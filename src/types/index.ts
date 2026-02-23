@@ -34,6 +34,8 @@ export interface DiagramNode {
   borderStyle?: BorderStyle;
   titleFormat?: TextFormatting;
   descFormat?: TextFormatting;
+  iconSvg?: string;   // Raw SVG path content for icon-node type
+  iconName?: string;  // Display name for icon-node type
 }
 
 export type ConnectionEndpointType = 'node' | 'note';
