@@ -154,6 +154,66 @@ export function ShareModal({ diagramName, onClose, onSave }: ShareModalProps) {
     } catch { showToast('Failed to update role'); }
   }, [state.currentDiagramId, shareSettings]);
 
+  /**
+   * Pre-process SVGs for html2canvas compatibility.
+   * html2canvas has poor inline-SVG support — convert SVGs to canvas-drawn images first.
+   */
+  const prepareSvgsForExport = useCallback((container: HTMLElement) => {
+    const svgs = container.querySelectorAll('svg');
+    const restoreFns: (() => void)[] = [];
+
+    svgs.forEach(svg => {
+      try {
+        // Ensure xmlns is set
+        if (!svg.getAttribute('xmlns')) {
+          svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        }
+
+        // Compute styles and inline them so html2canvas can read them
+        const computedColor = getComputedStyle(svg).color || 'currentColor';
+        const elements = svg.querySelectorAll('*');
+        elements.forEach(el => {
+          const computed = getComputedStyle(el);
+          const origStroke = el.getAttribute('stroke');
+          const origFill = el.getAttribute('fill');
+
+          if (origStroke === 'currentColor' || computed.stroke === 'currentColor') {
+            el.setAttribute('stroke', computedColor);
+            restoreFns.push(() => el.setAttribute('stroke', origStroke || 'currentColor'));
+          }
+          if (origFill === 'currentColor') {
+            el.setAttribute('fill', computedColor);
+            restoreFns.push(() => el.setAttribute('fill', origFill || 'currentColor'));
+          }
+        });
+
+        // For shape-bg SVGs: inline the stroke/fill from the computed styles
+        if (svg.classList.contains('shape-bg')) {
+          const shapeNode = svg.closest('.node.shape-node');
+          if (shapeNode) {
+            const bgStyle = getComputedStyle(svg);
+            const svgChildren = svg.querySelectorAll('ellipse, polygon, rect, path, circle, line, polyline');
+            svgChildren.forEach(child => {
+              const cs = getComputedStyle(child);
+              if (cs.stroke && cs.stroke !== 'none') {
+                const origVal = child.getAttribute('stroke');
+                child.setAttribute('stroke', cs.stroke);
+                restoreFns.push(() => { if (origVal !== null) child.setAttribute('stroke', origVal); else child.removeAttribute('stroke'); });
+              }
+              if (cs.fill && cs.fill !== 'none') {
+                const origVal = child.getAttribute('fill');
+                child.setAttribute('fill', cs.fill);
+                restoreFns.push(() => { if (origVal !== null) child.setAttribute('fill', origVal); else child.removeAttribute('fill'); });
+              }
+            });
+          }
+        }
+      } catch { /* ignore errors on individual SVGs */ }
+    });
+
+    return () => restoreFns.forEach(fn => fn());
+  }, []);
+
   // Export as PNG or PDF
   const handleExport = useCallback(async (format: 'png' | 'pdf') => {
     const canvas = document.getElementById('canvas');
@@ -163,6 +223,9 @@ export function ShareModal({ diagramName, onClose, onSave }: ShareModalProps) {
     try {
       // Add export-mode class to hide UI elements
       canvas.classList.add('export-mode');
+
+      // Pre-process SVGs for html2canvas compatibility
+      const restoreSvgs = prepareSvgsForExport(canvas);
 
       // Compute bounding box
       const bounds = computeBounds(state.nodes, state.stickyNotes, state.groups, state.canvasImages);
@@ -178,8 +241,11 @@ export function ShareModal({ diagramName, onClose, onSave }: ShareModalProps) {
         backgroundColor: state.theme === 'dark' ? '#0f1117' : '#f8f9fb',
         useCORS: true,
         logging: false,
+        foreignObjectRendering: false,
       });
 
+      // Restore SVGs and remove export mode
+      restoreSvgs();
       canvas.classList.remove('export-mode');
 
       if (format === 'png') {
@@ -210,7 +276,7 @@ export function ShareModal({ diagramName, onClose, onSave }: ShareModalProps) {
       showToast('Export failed');
     }
     setExporting(false);
-  }, [state, diagramName]);
+  }, [state, diagramName, prepareSvgsForExport]);
 
   const shareUrl = shareSettings.shareToken
     ? `${window.location.origin}/s/${shareSettings.shareToken}`
