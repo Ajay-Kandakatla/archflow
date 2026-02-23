@@ -102,18 +102,12 @@ function CodeBlock({ filename, language, children }: { filename?: string; langua
   );
 }
 
-// ─── Screenshot Placeholder ────────────────────────────────────────────────────
+// ─── Screenshot Component ───────────────────────────────────────────────────────
 
-function ScreenshotPlaceholder({ title, description }: { title: string; description: string }) {
+function Screenshot({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="docs-gif-placeholder">
-      <div className="docs-gif-icon">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-      </div>
-      <div className="docs-gif-title">{title}</div>
-      <div className="docs-gif-desc">{description}</div>
+    <div className="docs-screenshot">
+      <img src={src} alt={alt} loading="lazy" />
     </div>
   );
 }
@@ -371,7 +365,7 @@ export function DocsPage() {
                   <div className="docs-step"><div className="docs-step-num">3</div><div><strong>Add components</strong> — Drag from the sidebar or click to place at center.</div></div>
                   <div className="docs-step"><div className="docs-step-num">4</div><div><strong>Connect &amp; share</strong> — Draw connections, then share via link or email.</div></div>
                 </div>
-                <ScreenshotPlaceholder title="ArchFlow Dashboard" description="The main canvas with sidebar, topbar, and diagram workspace" />
+                <Screenshot src="/screenshots/dashboard.png" alt="ArchFlow Dashboard — the main canvas with sidebar, topbar, and diagram workspace" />
               </section>
 
               {/* Adding Nodes */}
@@ -386,7 +380,7 @@ export function DocsPage() {
                   <div className="docs-feature"><h4>Edit Inline</h4><p>Double-click any node title or description to edit it in place.</p></div>
                   <div className="docs-feature"><h4>Resize Nodes</h4><p>Drag edges or corners to resize. Min size: 170&times;90px.</p></div>
                 </div>
-                <ScreenshotPlaceholder title="Adding Nodes" description="Drag components from the sidebar onto the canvas to build your architecture" />
+                <Screenshot src="/screenshots/adding-nodes.png" alt="Adding Nodes — drag components from the sidebar onto the canvas" />
                 <h3 className="docs-h3">Node Categories</h3>
                 <div className="docs-category-list">
                   <div className="docs-cat-item"><span className="docs-cat-badge blue">System Blocks</span> Server, Database, API Gateway, Load Balancer, Cache, Queue, Microservice</div>
@@ -400,7 +394,7 @@ export function DocsPage() {
               <section id="drawing-connections" className="docs-section">
                 <h2 className="docs-section-title">Drawing Connections</h2>
                 <p className="docs-p">Connect nodes by dragging from one port to another. Three routing algorithms and bidirectional arrows.</p>
-                <ScreenshotPlaceholder title="Drawing Connections" description="Drag from a port on one node to a port on another to create a connection" />
+                <Screenshot src="/screenshots/connections.png" alt="Drawing Connections — drag from a port on one node to another" />
                 <h3 className="docs-h3">Routing Types</h3>
                 <div className="docs-feature-grid three-col">
                   <div className="docs-feature"><h4>Bezier Curves</h4><p>Smooth, organic curves that auto-adjust. Drag midpoint to customize.</p></div>
@@ -425,7 +419,7 @@ export function DocsPage() {
               <section id="templates" className="docs-section">
                 <h2 className="docs-section-title">Using Templates</h2>
                 <p className="docs-p">Jump-start with 13 pre-built templates covering common architecture patterns.</p>
-                <ScreenshotPlaceholder title="Template Gallery" description="Browse and load pre-built architecture templates" />
+                <Screenshot src="/screenshots/template-gallery.png" alt="Template Gallery — browse and load pre-built architecture templates" />
                 <div className="docs-template-grid">
                   {['Microservices', 'CI/CD Pipeline', 'Serverless', 'Event-Driven', 'Data Pipeline', 'Kubernetes', 'E-Commerce', 'Social Media', 'IoT Platform', 'ML Pipeline', 'Healthcare', 'Banking', 'Game Backend'].map(t => (
                     <div key={t} className="docs-template-chip">{t}</div>
@@ -443,7 +437,7 @@ export function DocsPage() {
                   <div className="docs-feature"><h4>Fit to Screen</h4><p>Right-click → &quot;Fit to Screen&quot; to auto-zoom to all content.</p></div>
                   <div className="docs-feature"><h4>Minimap</h4><p>Bottom-right minimap shows viewport relative to full diagram.</p></div>
                 </div>
-                <ScreenshotPlaceholder title="Canvas Navigation" description="Zoom, pan, and minimap for navigating large diagrams" />
+                <Screenshot src="/screenshots/canvas-navigation.png" alt="Canvas Navigation — zoom, pan, and minimap for navigating large diagrams" />
               </section>
 
               {/* Sticky Notes & Groups */}
@@ -456,7 +450,7 @@ export function DocsPage() {
                   <div className="docs-feature"><h4>Auto-grouping</h4><p>Select multiple → right-click → &quot;Group Selected&quot;.</p></div>
                   <div className="docs-feature"><h4>Marquee Select</h4><p>Click-drag on empty canvas to select everything in rectangle.</p></div>
                 </div>
-                <ScreenshotPlaceholder title="Sticky Notes & Groups" description="Annotations and organizational containers for your diagrams" />
+                <Screenshot src="/screenshots/sticky-notes-groups.png" alt="Sticky Notes and Groups — annotations and organizational containers" />
               </section>
 
               {/* Sharing */}
@@ -469,7 +463,7 @@ export function DocsPage() {
                   <div className="docs-feature"><h4>Roles</h4><p><strong>Owner:</strong> Full control. <strong>Editor:</strong> Can modify. <strong>Viewer:</strong> Read-only.</p></div>
                   <div className="docs-feature"><h4>Export</h4><p>Export as PNG image or copy the shareable URL.</p></div>
                 </div>
-                <ScreenshotPlaceholder title="Sharing Modal" description="Share with public links or email invitations" />
+                <Screenshot src="/screenshots/sharing-modal.png" alt="Sharing Modal — share with public links or email invitations" />
               </section>
 
               {/* Keyboard Shortcuts */}
@@ -503,7 +497,7 @@ export function DocsPage() {
                   <div className="docs-feature"><h4>Alignment</h4><p>Left, center, right. Bullet and numbered lists.</p></div>
                   <div className="docs-feature"><h4>Colors</h4><p>8 accent colors: blue, green, purple, orange, red, cyan, pink, yellow.</p></div>
                 </div>
-                <ScreenshotPlaceholder title="Text Toolbar" description="Floating toolbar for font, style, alignment, and color options" />
+                <Screenshot src="/screenshots/dashboard.png" alt="Text Toolbar — floating toolbar for font, style, alignment, and color options" />
               </section>
 
               {/* Image Upload */}
@@ -526,7 +520,7 @@ export function DocsPage() {
                   <div className="docs-step"><div className="docs-step-num">2</div><div>Describe your system: &quot;microservices with API gateway, auth service, and PostgreSQL&quot;</div></div>
                   <div className="docs-step"><div className="docs-step-num">3</div><div>AI generates nodes, connections, layout — auto-fits to screen</div></div>
                 </div>
-                <ScreenshotPlaceholder title="AI Generation" description="Natural language to architecture diagram in seconds" />
+                <Screenshot src="/screenshots/ai-generation.png" alt="AI Generation — natural language to architecture diagram in seconds" />
               </section>
             </>
           )}
