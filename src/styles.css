@@ -1093,24 +1093,29 @@ body {
     box-shadow: 0 0 0 2px var(--accent-blue), 0 0 20px rgba(107,159,219,0.15);
 }
 
-/* AI Panel — Right-side panel */
+/* AI Panel — Right-side slide panel */
 .ai-panel-side {
     position: fixed; top: 52px; right: 0; bottom: 0;
     z-index: 10000; display: flex; align-items: stretch; justify-content: flex-end;
-    animation: aiFadeIn 0.2s ease;
     pointer-events: none;
 }
 .ai-panel-side > * { pointer-events: auto; }
 @keyframes aiFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes aiSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes aiSlideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes aiSlideOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
 
 .ai-panel {
-    width: 400px; max-width: 92vw; height: 100%;
+    width: 380px; max-width: 92vw; height: 100%;
     background: var(--bg-sidebar); border-left: 1px solid var(--border-color);
     border-radius: 0; display: flex; flex-direction: column;
     box-shadow: -8px 0 30px rgba(0,0,0,0.3);
     overflow: hidden;
-    animation: aiSlideIn 0.25s ease;
+    animation: aiSlideIn 0.25s ease forwards;
+}
+
+/* Slide-out animation when closing */
+.ai-panel-side.closing .ai-panel {
+    animation: aiSlideOut 0.25s ease forwards;
 }
 
 /* Header */

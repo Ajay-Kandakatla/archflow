@@ -750,11 +750,26 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
   const [activeTab, setActiveTab] = useState<DiagramType>('auto');
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (visible) setTimeout(() => textareaRef.current?.focus(), 150);
+    if (visible) {
+      setIsClosing(false);
+      setTimeout(() => textareaRef.current?.focus(), 150);
+    }
   }, [visible]);
+
+  // Animated close: slide out, then actually unmount
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      setPrompt('');
+      setLastResult(null);
+      onClose();
+    }, 250); // matches slide-out animation duration
+  };
 
   const processInput = (text: string) => {
     setIsGenerating(true);
@@ -771,20 +786,20 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
         setLastResult(`Generated "${dt.name}" — ${data.nodes.length} components, ${data.connections.length} connections`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
         // Auto-close panel after successful generation so user can see the diagram
-        setTimeout(() => onClose(), 800);
+        setTimeout(() => handleClose(), 1200);
       } else if (parsed.template) {
         const tmpl = ARCH_TEMPLATES[parsed.template];
         const data = tmpl.generate();
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: tmpl.description } });
         setLastResult(`Generated "${tmpl.description}" — ${data.nodes.length} components, ${data.connections.length} connections`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
-        setTimeout(() => onClose(), 800);
+        setTimeout(() => handleClose(), 1200);
       } else if (parsed.nodes.length > 0) {
         const data = layoutNodes(parsed.nodes);
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: 'AI Generated Diagram' } });
         setLastResult(`Generated diagram with ${parsed.nodes.length} components`);
         setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
-        setTimeout(() => onClose(), 800);
+        setTimeout(() => handleClose(), 1200);
       } else {
         setLastResult('Could not match your description. Try using industry terms or technology names.');
       }
@@ -808,7 +823,7 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
   if (!visible) return null;
 
   return (
-    <div className="ai-panel-side" onClick={(e) => { if ((e.target as HTMLElement).classList.contains('ai-panel-side')) onClose(); }}>
+    <div className={`ai-panel-side ${isClosing ? 'closing' : ''}`} onClick={(e) => { if ((e.target as HTMLElement).classList.contains('ai-panel-side')) handleClose(); }}>
       <div className="ai-panel">
         {/* Header */}
         <div className="ai-panel-header">
@@ -816,7 +831,7 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
             <span className="ai-panel-icon">✨</span>
             <span className="ai-panel-title">AI Diagram Generator</span>
           </div>
-          <button className="ai-panel-close" onClick={onClose}>
+          <button className="ai-panel-close" onClick={handleClose}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
