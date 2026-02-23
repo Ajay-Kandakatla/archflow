@@ -344,7 +344,13 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.node-port') || target.closest('.node-delete') || target.closest('.node-resize') || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+    if (target.closest('.node-port') || target.closest('.node-delete') || target.closest('.node-resize')) return;
+    // Allow text editing in focused inputs/textareas for non-wireframe nodes,
+    // or for wireframe nodes only when already selected (click-to-select, then click-to-edit)
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      if (!isWireframe) return; // normal nodes: always allow text editing
+      if (isSelected && document.activeElement === target) return; // wireframe: allow if already focused
+    }
     if (state.currentTool !== 'select') return;
     e.stopPropagation(); // Prevent canvas from stealing this event
 

@@ -12,50 +12,88 @@ interface SidebarProps {
   aiActive?: boolean;
 }
 
-// Clean SVG icons for sidebar rail (20x20 viewBox, stroke-based for consistency)
-const RAIL_ICONS: Record<string, React.ReactNode> = {
-  system: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-      <circle cx="8" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.5" fill="currentColor" stroke="none"/><line x1="8" y1="10" x2="16" y2="10"/>
-    </svg>
-  ),
-  shapes: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="15.5" cy="15.5" r="6"/><rect x="2" y="2" width="12" height="12" rx="1"/>
-    </svg>
-  ),
-  wireframe: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/>
-    </svg>
-  ),
-  icons: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/>
-    </svg>
-  ),
-  groups: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="1" width="22" height="22" rx="3" strokeDasharray="4 2"/><rect x="5" y="5" width="6" height="6" rx="1"/><rect x="13" y="13" width="6" height="6" rx="1"/>
-    </svg>
-  ),
-  notes: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15.5 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8.5L15.5 3z"/><polyline points="14 3 14 9 21 9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="13" y2="17"/>
-    </svg>
-  ),
-  connectors: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="5" cy="6" r="3"/><circle cx="19" cy="18" r="3"/><path d="M8 6h4a4 4 0 014 4v4"/>
-      <polyline points="16 15 19 18 16 21"/>
-    </svg>
-  ),
-  ai: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
-    </svg>
-  ),
+// SVG icons + labels for sidebar rail — each designed to be immediately recognizable
+const RAIL_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
+  system: {
+    label: 'System',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/>
+        <rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>
+        <line x1="10" y1="7" x2="14" y2="7"/><line x1="7" y1="10" x2="7" y2="14"/>
+        <line x1="17" y1="10" x2="17" y2="14"/>
+      </svg>
+    ),
+  },
+  shapes: {
+    label: 'Shapes',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12,3 21,8.5 21,17.5 12,23 3,17.5 3,8.5"/>
+      </svg>
+    ),
+  },
+  wireframe: {
+    label: 'UI Kit',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <line x1="3" y1="9" x2="21" y2="9"/>
+        <rect x="6" y="12" width="5" height="3" rx="0.5" fill="currentColor" fillOpacity="0.15"/>
+        <line x1="6" y1="18" x2="18" y2="18" strokeOpacity="0.5"/>
+      </svg>
+    ),
+  },
+  icons: {
+    label: 'Icons',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 2v4"/><path d="M12 18v4"/>
+        <path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/>
+        <path d="M2 12h4"/><path d="M18 12h4"/>
+        <path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>
+      </svg>
+    ),
+  },
+  groups: {
+    label: 'Groups',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="3" strokeDasharray="4 2"/>
+        <rect x="5" y="5" width="6" height="6" rx="1.5" fill="currentColor" fillOpacity="0.15"/>
+        <rect x="13" y="11" width="6" height="6" rx="1.5" fill="currentColor" fillOpacity="0.15"/>
+      </svg>
+    ),
+  },
+  notes: {
+    label: 'Notes',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 3H5a2 2 0 00-2 2v14a2 2 0 002 2h10l6-6V5a2 2 0 00-2-2z"/>
+        <path d="M15 21v-6h6"/>
+        <line x1="7" y1="8" x2="13" y2="8"/><line x1="7" y1="12" x2="11" y2="12"/>
+      </svg>
+    ),
+  },
+  connectors: {
+    label: 'Lines',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="5" cy="5" r="2.5" fill="currentColor" fillOpacity="0.2"/><circle cx="19" cy="19" r="2.5" fill="currentColor" fillOpacity="0.2"/>
+        <path d="M7 5h5a4 4 0 014 4v5"/>
+        <polyline points="16 16 19 19 16 22"/>
+      </svg>
+    ),
+  },
+  ai: {
+    label: 'AI',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/>
+      </svg>
+    ),
+  },
 };
 
 // Tab definitions with category mappings
@@ -383,7 +421,8 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
             onClick={() => handleTabClick(tab.id)}
             title={tab.label}
           >
-            <span className="sidebar-rail-icon">{RAIL_ICONS[tab.id]}</span>
+            <span className="sidebar-rail-icon">{RAIL_ICONS[tab.id]?.icon}</span>
+            <span className="sidebar-rail-label">{RAIL_ICONS[tab.id]?.label}</span>
           </button>
         ))}
         <div style={{ flex: 1 }} />
@@ -392,7 +431,8 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
           onClick={onToggleAi}
           title="AI Generate"
         >
-          <span className="sidebar-rail-icon">{RAIL_ICONS.ai}</span>
+          <span className="sidebar-rail-icon">{RAIL_ICONS.ai?.icon}</span>
+          <span className="sidebar-rail-label">{RAIL_ICONS.ai?.label}</span>
         </button>
       </div>
 

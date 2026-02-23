@@ -131,6 +131,7 @@ export function Topbar({
         </div>
         {!isReadOnly && (
           <>
+            <a href="/docs" className="action-btn btn-docs" title="Documentation">Docs</a>
             <button className="action-btn btn-templates" onClick={onShowTemplates}>Templates</button>
             <button className="action-btn btn-save" onClick={onSave}>Save</button>
             <button className="action-btn btn-share" onClick={onExport}>Share</button>
@@ -156,10 +157,19 @@ export function Topbar({
               <div className="email" id="userMenuEmail">{currentUser.email}</div>
             </div>
             {currentUser.email.toLowerCase() === 'ajaykandakatla@gmail.com' && (
-              <div className="user-menu-item" onClick={onShowAdmin}>Admin Dashboard</div>
+              <div className="user-menu-item" onClick={onShowAdmin}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Admin Dashboard
+              </div>
             )}
-            <a href="/docs" className="user-menu-item" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>Documentation</a>
-            <div className="user-menu-item" onClick={onSignOut}>Sign out</div>
+            <a href="/docs" className="user-menu-item" style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+              Documentation
+            </a>
+            <div className="user-menu-item user-menu-signout" onClick={onSignOut}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign out
+            </div>
           </div>
         )}
       </div>
