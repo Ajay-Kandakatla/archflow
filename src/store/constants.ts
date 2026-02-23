@@ -48,7 +48,87 @@ export const CT: ComponentTypes = {
   'hexagon':        { icon: '⬡', title: 'Hexagon',        desc: '',                        badge: '',          color: 'orange' },
   'cylinder':       { icon: '⬭', title: 'Cylinder',       desc: '',                        badge: '',          color: 'red' },
   'parallelogram':  { icon: '▱', title: 'Parallelogram',  desc: '',                        badge: '',          color: 'pink' },
+  // Wireframe Elements
+  'wf-button':      { icon: '',  title: 'Button',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-input':       { icon: '',  title: 'Text Input',     desc: '',                        badge: '',          color: 'blue' },
+  'wf-text':        { icon: '',  title: 'Text Block',     desc: '',                        badge: '',          color: 'blue' },
+  'wf-image':       { icon: '',  title: 'Image',          desc: '',                        badge: '',          color: 'blue' },
+  'wf-browser':     { icon: '',  title: 'Browser',        desc: '',                        badge: '',          color: 'blue' },
+  'wf-mobile':      { icon: '',  title: 'Mobile',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-card':        { icon: '',  title: 'Card',           desc: '',                        badge: '',          color: 'blue' },
+  'wf-divider':     { icon: '',  title: 'Divider',        desc: '',                        badge: '',          color: 'blue' },
+  'wf-header':      { icon: '',  title: 'Header',         desc: '',                        badge: '',          color: 'blue' },
+  'wf-dropdown':    { icon: '',  title: 'Dropdown',       desc: '',                        badge: '',          color: 'blue' },
 };
+
+// ============================================
+// Type Classification
+// ============================================
+
+/** Shape types that render as geometric shapes (not rectangular cards) */
+export const SHAPE_TYPES = new Set([
+  'circle', 'diamond', 'hexagon', 'rectangle', 'rounded-rect',
+  'pill', 'cylinder', 'parallelogram',
+]);
+
+/** Wireframe types that render as UI mockup elements */
+export const WIREFRAME_TYPES = new Set([
+  'wf-button', 'wf-input', 'wf-text', 'wf-image',
+  'wf-browser', 'wf-mobile', 'wf-card', 'wf-divider',
+  'wf-header', 'wf-dropdown',
+]);
+
+export function isShapeType(type: string): boolean {
+  return SHAPE_TYPES.has(type);
+}
+
+export function isWireframeType(type: string): boolean {
+  return WIREFRAME_TYPES.has(type);
+}
+
+// ============================================
+// Default Dimensions per Type
+// ============================================
+
+export const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
+  // Shapes
+  'circle':         { width: 120, height: 120 },
+  'diamond':        { width: 140, height: 140 },
+  'hexagon':        { width: 130, height: 130 },
+  'pill':           { width: 160, height: 80 },
+  'cylinder':       { width: 120, height: 140 },
+  'parallelogram':  { width: 160, height: 100 },
+  'rectangle':      { width: 150, height: 100 },
+  'rounded-rect':   { width: 150, height: 100 },
+  // Wireframe elements
+  'wf-button':      { width: 120, height: 40 },
+  'wf-input':       { width: 200, height: 60 },
+  'wf-text':        { width: 200, height: 80 },
+  'wf-image':       { width: 200, height: 150 },
+  'wf-browser':     { width: 320, height: 240 },
+  'wf-mobile':      { width: 180, height: 320 },
+  'wf-card':        { width: 240, height: 160 },
+  'wf-divider':     { width: 200, height: 20 },
+  'wf-header':      { width: 400, height: 48 },
+  'wf-dropdown':    { width: 180, height: 44 },
+};
+
+// ============================================
+// Wireframe Sidebar Items
+// ============================================
+
+export const WIREFRAME_SHAPES = [
+  { type: 'wf-button',   label: 'Button' },
+  { type: 'wf-input',    label: 'Input' },
+  { type: 'wf-text',     label: 'Text' },
+  { type: 'wf-image',    label: 'Image' },
+  { type: 'wf-browser',  label: 'Browser' },
+  { type: 'wf-mobile',   label: 'Mobile' },
+  { type: 'wf-card',     label: 'Card' },
+  { type: 'wf-divider',  label: 'Divider' },
+  { type: 'wf-header',   label: 'Header' },
+  { type: 'wf-dropdown', label: 'Dropdown' },
+];
 
 // ============================================
 // Color Hex Values

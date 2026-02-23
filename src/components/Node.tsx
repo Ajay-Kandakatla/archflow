@@ -1,7 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import type { DiagramNode, PortPosition, NodeColor, TextFormatting } from '@/types';
 import { useDiagram } from '@/store/DiagramContext';
-import { CV, CV_LIGHT } from '@/store/constants';
+import { CV, CV_LIGHT, isShapeType, isWireframeType } from '@/store/constants';
 import { screenToCanvas } from '@/utils/canvas';
 import { computeSnap } from '@/utils/snap';
 import { NodeIcon } from '@/components/NodeIcon';
@@ -24,6 +24,128 @@ function formatStyle(fmt: TextFormatting | undefined, theme: string): React.CSSP
   };
 }
 
+/** Return the SVG shape element(s) for a shape type */
+function getShapeSVG(type: string): React.ReactNode {
+  switch (type) {
+    case 'circle':
+      return <ellipse cx="50" cy="50" rx="49" ry="49" />;
+    case 'diamond':
+      return <polygon points="50,1 99,50 50,99 1,50" />;
+    case 'hexagon':
+      return <polygon points="25,1 75,1 99,50 75,99 25,99 1,50" />;
+    case 'pill':
+      return <rect x="1" y="1" width="98" height="98" rx="49" ry="49" />;
+    case 'cylinder':
+      return (
+        <>
+          <path d="M1,18 C1,8 50,0 50,0 C50,0 99,8 99,18 L99,82 C99,92 50,100 50,100 C50,100 1,92 1,82 Z" />
+          <ellipse cx="50" cy="18" rx="49" ry="18" fillOpacity="0" strokeOpacity="0.3" />
+        </>
+      );
+    case 'parallelogram':
+      return <polygon points="20,1 99,1 80,99 1,99" />;
+    case 'rectangle':
+      return <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />;
+    case 'rounded-rect':
+      return <rect x="1" y="1" width="98" height="98" rx="16" ry="16" />;
+    default:
+      return <rect x="1" y="1" width="98" height="98" rx="3" ry="3" />;
+  }
+}
+
+/** Wireframe inner content component */
+function WireframeContent({ node, dispatch, theme }: { node: DiagramNode; dispatch: any; theme: string }) {
+  switch (node.type) {
+    case 'wf-button':
+      return (
+        <div className="wf-button-inner">
+          <input className="wf-label" defaultValue={node.title || 'Button'}
+            onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+        </div>
+      );
+    case 'wf-input':
+      return (
+        <div className="wf-input-inner">
+          <span className="wf-input-label">{node.title || 'Label'}</span>
+          <div className="wf-input-field">
+            <span className="wf-input-placeholder">Enter text...</span>
+          </div>
+        </div>
+      );
+    case 'wf-text':
+      return (
+        <div className="wf-text-inner">
+          <textarea className="wf-text-area" defaultValue={node.title || 'Text block'}
+            onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+        </div>
+      );
+    case 'wf-image':
+      return (
+        <div className="wf-image-inner">
+          <svg viewBox="0 0 100 80" className="wf-image-placeholder" preserveAspectRatio="xMidYMid meet">
+            <rect x="1" y="1" width="98" height="78" fill="none" stroke="currentColor" strokeWidth="1" rx="2" />
+            <line x1="1" y1="1" x2="99" y2="79" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
+            <line x1="99" y1="1" x2="1" y2="79" stroke="currentColor" strokeWidth="0.5" opacity="0.4" />
+            <text x="50" y="44" textAnchor="middle" fontSize="10" fill="currentColor" opacity="0.5">Image</text>
+          </svg>
+        </div>
+      );
+    case 'wf-browser':
+      return (
+        <div className="wf-browser-inner">
+          <div className="wf-browser-chrome">
+            <span className="wf-browser-dots">
+              <span className="wf-dot red" /><span className="wf-dot yellow" /><span className="wf-dot green" />
+            </span>
+            <div className="wf-browser-url">https://</div>
+          </div>
+          <div className="wf-browser-viewport" />
+        </div>
+      );
+    case 'wf-mobile':
+      return (
+        <div className="wf-mobile-inner">
+          <div className="wf-mobile-notch" />
+          <div className="wf-mobile-screen" />
+          <div className="wf-mobile-bar" />
+        </div>
+      );
+    case 'wf-card':
+      return (
+        <div className="wf-card-inner">
+          <div className="wf-card-header">
+            <input className="wf-card-title" defaultValue={node.title || 'Card Title'}
+              onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+          </div>
+          <div className="wf-card-body" />
+        </div>
+      );
+    case 'wf-divider':
+      return <div className="wf-divider-inner"><hr className="wf-divider-line" /></div>;
+    case 'wf-header':
+      return (
+        <div className="wf-header-inner">
+          <span className="wf-header-logo">Logo</span>
+          <div className="wf-header-nav">
+            <span>Home</span><span>About</span><span>Contact</span>
+          </div>
+        </div>
+      );
+    case 'wf-dropdown':
+      return (
+        <div className="wf-dropdown-inner">
+          <div className="wf-dropdown-selected">
+            <input className="wf-dropdown-text" defaultValue={node.title || 'Select...'}
+              onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+            <span className="wf-dropdown-arrow">&#x25BE;</span>
+          </div>
+        </div>
+      );
+    default:
+      return <div className="wf-default">{node.title}</div>;
+  }
+}
+
 interface NodeProps {
   node: DiagramNode;
   isSelected: boolean;
@@ -42,6 +164,9 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
   // Keep refs to current pan/scale so drag handler always has fresh values
   const panScaleRef = useRef({ panX: state.panX, panY: state.panY, scale: state.scale });
   panScaleRef.current = { panX: state.panX, panY: state.panY, scale: state.scale };
+
+  const isShape = isShapeType(node.type);
+  const isWireframe = isWireframeType(node.type);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -123,8 +248,11 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     const startY = node.y;
     const startMouseX = e.clientX;
     const startMouseY = e.clientY;
-    const MIN_W = 140;
-    const MIN_H = 70;
+    const MIN_W = 60;
+    const MIN_H = 30;
+
+    // Lock aspect ratio for circle and diamond shapes
+    const lockedAspect = (node.type === 'circle' || node.type === 'diamond');
 
     const onMove = (ev: MouseEvent) => {
       const { scale } = panScaleRef.current;
@@ -141,6 +269,13 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
       if (handle.includes('bottom')) { newH = Math.max(MIN_H, startH + dy); }
       if (handle.includes('top')) { newH = Math.max(MIN_H, startH - dy); newY = startY + startH - newH; }
 
+      // Enforce 1:1 aspect ratio for circle/diamond
+      if (lockedAspect) {
+        const maxDim = Math.max(newW, newH);
+        newW = maxDim;
+        newH = maxDim;
+      }
+
       dispatch({ type: 'RESIZE_NODE', payload: { id: node.id, x: newX, y: newY, width: newW, height: newH } });
     };
     const onUp = () => {
@@ -149,7 +284,7 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [node.id, node.x, node.y, node.width, node.height, dispatch]);
+  }, [node.id, node.x, node.y, node.width, node.height, node.type, dispatch]);
 
   const nodeStyle: React.CSSProperties = {
     left: node.x,
@@ -160,11 +295,22 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
     ...(node.borderStyle === 'dashed' ? { borderStyle: 'dashed' } : {}),
   };
 
+  // Build class name
+  const className = [
+    'node',
+    isSelected ? 'selected' : '',
+    isMultiSelected ? 'multi-selected' : '',
+    isShape ? 'shape-node' : '',
+    isWireframe ? 'wireframe-node' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`node ${isSelected ? 'selected' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+      className={className}
       id={'node-' + node.id}
       data-color={node.color}
+      data-shape={isShape ? node.type : undefined}
+      data-wireframe={isWireframe ? node.type : undefined}
       style={nodeStyle}
       onMouseDown={handleMouseDown}
     >
@@ -188,17 +334,35 @@ export const NodeComponent = React.memo(function NodeComponent({ node, isSelecte
         </>
       )}
 
-      <div className="node-header">
-        <NodeIcon type={node.type} fallback={node.icon} size={22} className="node-icon" />
-        <input className="node-title" defaultValue={node.title}
-          style={formatStyle(node.titleFormat, state.theme)}
-          onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
-      </div>
-      <div className="node-body">
-        <textarea className="node-desc" defaultValue={node.desc}
-          style={formatStyle(node.descFormat, state.theme)}
-          onChange={(e) => dispatch({ type: 'UPDATE_NODE_DESC', payload: { id: node.id, desc: e.target.value } })} />
-      </div>
+      {/* === VISUAL CONTENT — differs by category === */}
+      {isShape ? (
+        <>
+          <svg className="shape-bg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {getShapeSVG(node.type)}
+          </svg>
+          <div className="shape-content">
+            <input className="shape-title" defaultValue={node.title}
+              style={formatStyle(node.titleFormat, state.theme)}
+              onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+          </div>
+        </>
+      ) : isWireframe ? (
+        <WireframeContent node={node} dispatch={dispatch} theme={state.theme} />
+      ) : (
+        <>
+          <div className="node-header">
+            <NodeIcon type={node.type} fallback={node.icon} size={22} className="node-icon" />
+            <input className="node-title" defaultValue={node.title}
+              style={formatStyle(node.titleFormat, state.theme)}
+              onChange={(e) => dispatch({ type: 'UPDATE_NODE_TITLE', payload: { id: node.id, title: e.target.value } })} />
+          </div>
+          <div className="node-body">
+            <textarea className="node-desc" defaultValue={node.desc}
+              style={formatStyle(node.descFormat, state.theme)}
+              onChange={(e) => dispatch({ type: 'UPDATE_NODE_DESC', payload: { id: node.id, desc: e.target.value } })} />
+          </div>
+        </>
+      )}
     </div>
   );
 });

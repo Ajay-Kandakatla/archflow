@@ -9,7 +9,7 @@ test.describe('Click-to-Place Nodes', () => {
     await placeNode(appPage, 'browser');
     const nodes = appPage.locator('.node');
     await expect(nodes).toHaveCount(1);
-    await expect(nodes.first()).toContainText('Browser');
+    await expect(nodes.first().locator('.node-title')).toHaveValue('Browser');
   });
 
   test('stacks multiple click-placed nodes with offset', async ({ appPage }) => {

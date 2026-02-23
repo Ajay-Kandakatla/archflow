@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect, type ReactNode } from 'react';
 import type { DiagramNode, Connection, StickyNote, CanvasImage, GroupContainer, ToolMode, Theme, User, PortPosition, NodeColor, ConnectionRouting, TextFormatting, Waypoint, BorderStyle } from '@/types';
-import { CT, CV } from './constants';
+import { CT, CV, DEFAULT_DIMENSIONS } from './constants';
 
 // Maximum undo history size
 const MAX_UNDO_HISTORY = 50;
@@ -133,7 +133,8 @@ function diagramReducer(state: DiagramState, action: DiagramAction): DiagramStat
       const ct = CT[action.payload.nodeType];
       if (!ct) return state;
       const id = state.nodeIdCounter + 1;
-      const node: DiagramNode = { id, type: action.payload.nodeType, x: action.payload.x, y: action.payload.y, ...ct };
+      const dims = DEFAULT_DIMENSIONS[action.payload.nodeType];
+      const node: DiagramNode = { id, type: action.payload.nodeType, x: action.payload.x, y: action.payload.y, ...ct, ...(dims ? { width: dims.width, height: dims.height } : {}) };
       return { ...state, nodes: [...state.nodes, node], nodeIdCounter: id };
     }
     case 'MOVE_NODE':

@@ -5,10 +5,10 @@ import { test, expect, openSidebarTab } from './fixtures';
  * Verifies the sidebar rail, tab switching, and panel content.
  */
 test.describe('Sidebar Rail', () => {
-  test('shows rail with 6 tab buttons', async ({ appPage }) => {
+  test('shows rail with 7 tab buttons', async ({ appPage }) => {
     const rail = appPage.locator('.sidebar-rail');
     await expect(rail).toBeVisible();
-    await expect(rail.locator('.sidebar-rail-btn')).toHaveCount(6);
+    await expect(rail.locator('.sidebar-rail-btn')).toHaveCount(7);
   });
 
   test('rail is 56px wide', async ({ appPage }) => {
@@ -55,8 +55,18 @@ test.describe('Sidebar Panels', () => {
     await expect(panel).toContainText('Diamond');
   });
 
-  test('groups panel shows group containers', async ({ appPage }) => {
+  test('wireframe panel shows wireframe elements', async ({ appPage }) => {
     await openSidebarTab(appPage, 2);
+    const panel = appPage.locator('.sidebar-panel');
+    await expect(panel).toContainText('Wireframe Elements');
+    await expect(panel).toContainText('Button');
+    await expect(panel).toContainText('Browser');
+    await expect(panel).toContainText('Mobile');
+    await expect(panel).toContainText('Input');
+  });
+
+  test('groups panel shows group containers', async ({ appPage }) => {
+    await openSidebarTab(appPage, 3);
     const panel = appPage.locator('.sidebar-panel');
     await expect(panel).toContainText('Group Containers');
     await expect(panel).toContainText('Blue Group');
@@ -64,7 +74,7 @@ test.describe('Sidebar Panels', () => {
   });
 
   test('notes panel shows sticky notes', async ({ appPage }) => {
-    await openSidebarTab(appPage, 3);
+    await openSidebarTab(appPage, 4);
     const panel = appPage.locator('.sidebar-panel');
     await expect(panel).toContainText('Sticky Notes');
     await expect(panel).toContainText('Yellow Note');
@@ -72,7 +82,7 @@ test.describe('Sidebar Panels', () => {
   });
 
   test('connectors panel shows instructions', async ({ appPage }) => {
-    await openSidebarTab(appPage, 4);
+    await openSidebarTab(appPage, 5);
     const panel = appPage.locator('.sidebar-panel');
     await expect(panel).toContainText('Connection Tools');
     await expect(panel).toContainText('Draw connections');

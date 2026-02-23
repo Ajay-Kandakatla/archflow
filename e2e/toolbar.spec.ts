@@ -5,8 +5,8 @@ import { test, expect, placeNode } from './fixtures';
  * Verifies topbar controls, template modal, file input, toast, and auto-save.
  */
 test.describe('Export & Save Buttons', () => {
-  test('has export button', async ({ appPage }) => {
-    await expect(appPage.locator('.btn-export')).toBeVisible();
+  test('has share button', async ({ appPage }) => {
+    await expect(appPage.locator('.btn-share')).toBeVisible();
   });
 
   test('has save button in topbar', async ({ appPage }) => {

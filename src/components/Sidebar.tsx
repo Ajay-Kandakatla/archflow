@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CT, SIDEBAR_SECTIONS } from '@/store/constants';
+import { CT, SIDEBAR_SECTIONS, WIREFRAME_SHAPES } from '@/store/constants';
 import { NodeIcon } from '@/components/NodeIcon';
 
 interface SidebarProps {
@@ -13,11 +13,12 @@ interface SidebarProps {
 
 // Tab definitions with icons and category mappings
 const TABS = [
-  { id: 'system', icon: '🏗️', label: 'System Blocks', sections: [0, 1, 2, 3, 4, 5, 6] }, // All system categories
-  { id: 'shapes', icon: '◇', label: 'Shapes', sections: [] as number[] }, // Empty blocks / basic shapes
-  { id: 'groups', icon: '▢', label: 'Groups', sections: [] as number[] }, // Group containers
-  { id: 'notes', icon: '📝', label: 'Notes', sections: [] as number[] }, // Sticky notes
-  { id: 'connectors', icon: '⤷', label: 'Connectors', sections: [] as number[] }, // Connection tools
+  { id: 'system', icon: '🏗️', label: 'System Blocks', sections: [0, 1, 2, 3, 4, 5, 6] },
+  { id: 'shapes', icon: '◇', label: 'Shapes', sections: [] as number[] },
+  { id: 'wireframe', icon: '📐', label: 'Wireframe', sections: [] as number[] },
+  { id: 'groups', icon: '▢', label: 'Groups', sections: [] as number[] },
+  { id: 'notes', icon: '📝', label: 'Notes', sections: [] as number[] },
+  { id: 'connectors', icon: '⤷', label: 'Connectors', sections: [] as number[] },
 ];
 
 // Basic shapes that can be placed as empty blocks
@@ -72,6 +73,18 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
     }
   };
 
+  const getShortcutKey = () => {
+    switch (activeTab) {
+      case 'system': return 'S';
+      case 'shapes': return 'D';
+      case 'wireframe': return 'W';
+      case 'groups': return 'G';
+      case 'notes': return 'N';
+      case 'connectors': return 'C';
+      default: return '';
+    }
+  };
+
   const renderPanelContent = () => {
     switch (activeTab) {
       case 'system':
@@ -119,6 +132,28 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
                   onClick={() => onClickAdd(shape.type)}
                 >
                   <span className="component-icon">{shape.icon}</span>
+                  <span className="component-name">{shape.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'wireframe':
+        return (
+          <div className="sidebar-section">
+            <div className="sidebar-title">Wireframe Elements</div>
+            <div className="component-grid">
+              {WIREFRAME_SHAPES.map(shape => (
+                <div
+                  key={shape.type}
+                  className="component-item"
+                  data-type={shape.type}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, shape.type)}
+                  onClick={() => onClickAdd(shape.type)}
+                >
+                  <span className="component-icon"><NodeIcon type={shape.type} size={24} /></span>
                   <span className="component-name">{shape.label}</span>
                 </div>
               ))}
@@ -220,7 +255,7 @@ export function Sidebar({ onClickAdd, onClickAddGroup, panelOpen, onTabChange, o
                 {TABS.find(t => t.id === activeTab)?.label}
               </span>
               <span className="sidebar-panel-shortcut">
-                {activeTab === 'system' ? 'S' : activeTab === 'shapes' ? 'D' : activeTab === 'groups' ? 'G' : activeTab === 'notes' ? 'N' : 'C'}
+                {getShortcutKey()}
               </span>
             </div>
             <div className="sidebar-panel-content">

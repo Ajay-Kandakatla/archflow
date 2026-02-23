@@ -329,6 +329,105 @@ function SearchIcon({ size = 18 }: IconProps) {
   );
 }
 
+// --- Wireframe Elements ---
+
+function WfButtonIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="14" height="8" rx="3" />
+      <line x1="6" y1="9" x2="12" y2="9" />
+    </svg>
+  );
+}
+
+function WfInputIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="5" width="16" height="8" rx="1.5" />
+      <line x1="4" y1="7.5" x2="4" y2="10.5" />
+    </svg>
+  );
+}
+
+function WfTextIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2" y1="4" x2="16" y2="4" />
+      <line x1="2" y1="8" x2="14" y2="8" />
+      <line x1="2" y1="12" x2="10" y2="12" />
+    </svg>
+  );
+}
+
+function WfImageIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="14" height="12" rx="1.5" />
+      <line x1="2" y1="3" x2="16" y2="15" strokeWidth="0.8" />
+      <line x1="16" y1="3" x2="2" y2="15" strokeWidth="0.8" />
+    </svg>
+  );
+}
+
+function WfBrowserIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="16" height="14" rx="2" />
+      <line x1="1" y1="6" x2="17" y2="6" />
+      <circle cx="3.5" cy="4" r="0.6" fill="currentColor" stroke="none" />
+      <circle cx="5.5" cy="4" r="0.6" fill="currentColor" stroke="none" />
+      <circle cx="7.5" cy="4" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function WfMobileIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4.5" y="1" width="9" height="16" rx="2" />
+      <line x1="7" y1="3" x2="11" y2="3" />
+      <line x1="7" y1="15" x2="11" y2="15" />
+    </svg>
+  );
+}
+
+function WfCardIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="14" height="12" rx="2" />
+      <line x1="2" y1="7" x2="16" y2="7" />
+    </svg>
+  );
+}
+
+function WfDividerIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2" y1="9" x2="16" y2="9" />
+    </svg>
+  );
+}
+
+function WfHeaderIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="5" width="16" height="8" rx="1.5" />
+      <circle cx="4" cy="9" r="1.5" />
+      <line x1="8" y1="9" x2="10" y2="9" />
+      <line x1="12" y1="9" x2="14" y2="9" />
+    </svg>
+  );
+}
+
+function WfDropdownIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="14" height="8" rx="1.5" />
+      <path d="M12 8 L14 10 L12 12" fill="none" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 // ============================================
 // Type → Icon Map
 // ============================================
@@ -368,6 +467,17 @@ const NODE_TYPE_ICONS: Record<string, React.FC<IconProps>> = {
   'logging': LoggingIcon,
   'analytics': AnalyticsIcon,
   'search': SearchIcon,
+  // Wireframe
+  'wf-button': WfButtonIcon,
+  'wf-input': WfInputIcon,
+  'wf-text': WfTextIcon,
+  'wf-image': WfImageIcon,
+  'wf-browser': WfBrowserIcon,
+  'wf-mobile': WfMobileIcon,
+  'wf-card': WfCardIcon,
+  'wf-divider': WfDividerIcon,
+  'wf-header': WfHeaderIcon,
+  'wf-dropdown': WfDropdownIcon,
 };
 
 // ============================================
