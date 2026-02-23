@@ -156,15 +156,15 @@ function optionalAuth(req, res, next) {
 app.get('/api/config', (req, res) => {
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-    devLoginEnabled: !process.env.GOOGLE_CLIENT_ID,
+    devLoginEnabled: !process.env.GOOGLE_CLIENT_ID || process.env.DEV_LOGIN_ENABLED === 'true',
   });
 });
 
 // =============================================
-// Dev Login (only when Google Client ID is not set)
+// Dev Login (when Google Client ID is not set, or DEV_LOGIN_ENABLED=true)
 // =============================================
 app.post('/api/auth/dev-login', async (req, res) => {
-  if (process.env.GOOGLE_CLIENT_ID) {
+  if (process.env.GOOGLE_CLIENT_ID && process.env.DEV_LOGIN_ENABLED !== 'true') {
     return res.status(403).json({ error: 'Dev login disabled in production' });
   }
 
