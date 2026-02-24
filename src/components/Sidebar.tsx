@@ -18,10 +18,12 @@ const RAIL_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
     label: 'System',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/>
-        <rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>
-        <line x1="10" y1="7" x2="14" y2="7"/><line x1="7" y1="10" x2="7" y2="14"/>
-        <line x1="17" y1="10" x2="17" y2="14"/>
+        {/* Server rack — two horizontal servers with indicator lights */}
+        <rect x="2" y="3" width="20" height="7" rx="1.5"/>
+        <circle cx="5.5" cy="6.5" r="1.2" fill="currentColor"/>
+        <rect x="2" y="14" width="20" height="7" rx="1.5"/>
+        <circle cx="5.5" cy="17.5" r="1.2" fill="currentColor"/>
+        <line x1="9" y1="10" x2="9" y2="14"/><line x1="15" y1="10" x2="15" y2="14"/>
       </svg>
     ),
   },
@@ -29,7 +31,10 @@ const RAIL_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
     label: 'Shapes',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12,3 21,8.5 21,17.5 12,23 3,17.5 3,8.5"/>
+        {/* Three distinct shapes: rectangle (top-left), circle (top-right), triangle (bottom) */}
+        <rect x="1" y="2" width="9" height="8" rx="1.5"/>
+        <circle cx="17.5" cy="6" r="4.5"/>
+        <polygon points="12,14 22.5,23 1.5,23"/>
       </svg>
     ),
   },
@@ -48,11 +53,11 @@ const RAIL_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
     label: 'Icons',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 2v4"/><path d="M12 18v4"/>
-        <path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/>
-        <path d="M2 12h4"/><path d="M18 12h4"/>
-        <path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>
+        {/* 2×2 symbol grid — represents an icon library/gallery */}
+        <rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2"/>
+        <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2"/>
+        <rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2"/>
+        <rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" fillOpacity="0.2"/>
       </svg>
     ),
   },
@@ -90,7 +95,10 @@ const RAIL_ICONS: Record<string, { icon: React.ReactNode; label: string }> = {
     label: 'AI',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/>
+        {/* Lucide-style sparkles — large 4-point star + small cross accents */}
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+        <path d="M5 3v4"/><path d="M3 5h4"/>
+        <path d="M19 17v4"/><path d="M17 19h4"/>
       </svg>
     ),
   },
