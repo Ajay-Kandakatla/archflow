@@ -163,4 +163,5 @@ export interface DiagramMeta {
   updatedAt: string;
   folder?: string;
   data?: DiagramData;
+  role?: 'owner' | 'editor' | 'viewer';
 }

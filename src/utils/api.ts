@@ -25,9 +25,24 @@ async function authFetch(url: string, opts: RequestInit = {}): Promise<Response>
   return r;
 }
 
+async function throwIfNotOk(r: Response) {
+  if (r.ok) return;
+  let message = `Request failed (${r.status})`;
+  try {
+    const data = await r.json();
+    if (data?.error) message = data.error;
+  } catch {
+    // ignore parse errors
+  }
+  const err: any = new Error(message);
+  err.status = r.status;
+  throw err;
+}
+
 export const API = {
   async list(): Promise<DiagramMeta[]> {
     const r = await authFetch('/api/diagrams', { headers: authHeaders() });
+    await throwIfNotOk(r);
     const data = await r.json();
     return Array.isArray(data) ? data : [];
   },
@@ -35,7 +50,7 @@ export const API = {
   async get(id: string): Promise<DiagramMeta> {
     if (!id || id === 'undefined' || id === 'null') throw new Error('Invalid diagram ID');
     const r = await authFetch('/api/diagrams/' + id, { headers: authHeaders() });
-    if (!r.ok) throw new Error(`Failed to get diagram: ${r.status}`);
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -45,6 +60,7 @@ export const API = {
       headers: authHeaders(),
       body: JSON.stringify({ name, data, folder: folder || '' }),
     });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -55,11 +71,13 @@ export const API = {
       headers: authHeaders(),
       body: JSON.stringify(payload),
     });
+    await throwIfNotOk(r);
     return r.json();
   },
 
   async remove(id: string): Promise<{ ok: boolean }> {
     const r = await authFetch('/api/diagrams/' + id, { method: 'DELETE', headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -71,6 +89,7 @@ export const API = {
       headers: authToken ? { Authorization: 'Bearer ' + authToken } : {},
       body: fd,
     });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -101,12 +120,13 @@ export const API = {
     return r.json();
   },
 
-  async generateDiagram(prompt: string): Promise<any> {
+  async generateDiagram(prompt: string, diagramType?: string): Promise<any> {
     const r = await authFetch('/api/ai/generate', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, diagramType }),
     });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -121,22 +141,26 @@ export const API = {
   }> {
     const url = since ? `/api/admin/notifications?since=${encodeURIComponent(since)}` : '/api/admin/notifications';
     const r = await authFetch(url, { headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 
   async getAdminUsers(): Promise<any[]> {
     const r = await authFetch('/api/admin/users', { headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 
   async getAdminStats(): Promise<{ totalUsers: number; totalDiagrams: number }> {
     const r = await authFetch('/api/admin/stats', { headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 
   // Sharing APIs
   async getSharing(diagramId: string): Promise<{ isPublic: boolean; publicRole: string; shareToken: string | null; shares: Array<{ email: string; role: string; addedAt?: string }> }> {
     const r = await authFetch(`/api/diagrams/${diagramId}/sharing`, { headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -146,6 +170,7 @@ export const API = {
       headers: authHeaders(),
       body: JSON.stringify(payload),
     });
+    await throwIfNotOk(r);
     return r.json();
   },
 
@@ -163,6 +188,7 @@ export const API = {
 
   async getSharedWithMe(): Promise<DiagramMeta[]> {
     const r = await authFetch('/api/diagrams/shared-with-me', { headers: authHeaders() });
+    await throwIfNotOk(r);
     return r.json();
   },
 };

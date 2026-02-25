@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDiagram } from '@/store/DiagramContext';
 import { CT } from '@/store/constants';
+import { API } from '@/utils/api';
 import type { DiagramData } from '@/types';
 
 /**
@@ -771,11 +772,29 @@ export function AiPromptPanel({ visible, onClose }: AiPromptPanelProps) {
     }, 250); // matches slide-out animation duration
   };
 
-  const processInput = (text: string) => {
+  const processInput = async (text: string) => {
     setIsGenerating(true);
     setLastResult(null);
 
-    // Simulate brief generation delay for UX
+    // ── Step 1: Try LLM generation ──────────────────────────────────────────
+    try {
+      const result = await API.generateDiagram(text, activeTab);
+      if (result.nodes && result.nodes.length > 0) {
+        const data = buildDiagram(result.nodes, result.connections || []);
+        if (data.nodes.length > 0) {
+          dispatch({ type: 'LOAD_DIAGRAM', payload: { data, id: '', name: text.slice(0, 50) } });
+          setLastResult(`Generated diagram with ${data.nodes.length} components, ${data.connections.length} connections`);
+          setTimeout(() => window.dispatchEvent(new CustomEvent('archflow-fit-screen')), 200);
+          setTimeout(() => handleClose(), 1200);
+          setIsGenerating(false);
+          return;
+        }
+      }
+    } catch {
+      // LLM unavailable or not configured — fall through to pattern matching
+    }
+
+    // ── Step 2: Fallback — pattern-based generation ──────────────────────────
     setTimeout(() => {
       const parsed = parsePrompt(text, activeTab);
 

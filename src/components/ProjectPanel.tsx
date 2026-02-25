@@ -61,7 +61,7 @@ function countDiagrams(node: FolderTreeNode): number {
 
 interface ProjectPanelProps {
   visible: boolean;
-  onLoadDiagram: (id: string) => void;
+  onLoadDiagram: (id: string, role?: 'owner' | 'editor' | 'viewer') => void;
   onNewDiagram: (folder?: string) => void;
 }
 
@@ -69,7 +69,9 @@ interface ProjectPanelProps {
 
 export function ProjectPanel({ visible, onLoadDiagram, onNewDiagram }: ProjectPanelProps) {
   const { state } = useDiagram();
+  const [activeTab, setActiveTab] = useState<'mine' | 'shared'>('mine');
   const [diagrams, setDiagrams] = useState<DiagramMeta[]>([]);
+  const [sharedDiagrams, setSharedDiagrams] = useState<DiagramMeta[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [currentFolder, setCurrentFolder] = useState('');
   const [movingDiagram, setMovingDiagram] = useState<DiagramMeta | null>(null);
@@ -85,13 +87,29 @@ export function ProjectPanel({ visible, onLoadDiagram, onNewDiagram }: ProjectPa
     }
   }, [state.authToken]);
 
+  const loadSharedList = useCallback(async () => {
+    if (!state.authToken) return;
+    try {
+      const list = await API.getSharedWithMe();
+      setSharedDiagrams(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.error('Failed to load shared diagrams:', e);
+    }
+  }, [state.authToken]);
+
   useEffect(() => {
     if (visible && state.authToken) {
       loadList();
+      loadSharedList();
     }
-  }, [visible, state.authToken, loadList]);
+  }, [visible, state.authToken, loadList, loadSharedList]);
 
   const tree = useMemo(() => buildTree(diagrams), [diagrams]);
+  const sharedSorted = useMemo(() => {
+    return [...sharedDiagrams].sort((a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [sharedDiagrams]);
 
   const existingFolders = useMemo(() => {
     const folders = new Set<string>();
@@ -185,6 +203,28 @@ export function ProjectPanel({ visible, onLoadDiagram, onNewDiagram }: ProjectPa
     </div>
   );
 
+  const renderSharedDiagramItem = (d: DiagramMeta) => {
+    const role = d.role || 'viewer';
+    return (
+      <div
+        key={d._id}
+        className={`project-item shared${d._id === state.currentDiagramId ? ' active' : ''}`}
+        style={{ paddingLeft: 12 }}
+        onClick={() => onLoadDiagram(d._id, role)}
+      >
+        <div className="project-item-info">
+          <div className="project-item-name">
+            {d.name}
+            <span className={`project-role-badge ${role}`}>{role}</span>
+          </div>
+          <div className="project-item-meta">
+            {new Date(d.updatedAt).toLocaleDateString()}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderFolder = (node: FolderTreeNode, depth: number) => {
     const isExpanded = expandedFolders.has(node.path);
     const count = countDiagrams(node);
@@ -218,25 +258,54 @@ export function ProjectPanel({ visible, onLoadDiagram, onNewDiagram }: ProjectPa
   return (
     <div className="project-panel show" id="projectPanel">
       <div className="sidebar-title">Your Diagrams</div>
-      <button className="project-new-btn" onClick={() => onNewDiagram(currentFolder || undefined)}>
-        + New Diagram{currentFolder ? ` in ${currentFolder.split('/').pop()}` : ''}
-      </button>
-      {currentFolder && (
+      <div className="project-tabs">
         <button
-          className="folder-reset-btn"
-          onClick={() => { setCurrentFolder(''); }}
+          className={`project-tab ${activeTab === 'mine' ? 'active' : ''}`}
+          onClick={() => setActiveTab('mine')}
         >
-          Create at root instead
+          Mine
         </button>
-      )}
-      <div id="projectList">
-        {renderFolder(tree, 0)}
-        {diagrams.length === 0 && (
-          <div style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
-            No diagrams yet. Create one!
-          </div>
-        )}
+        <button
+          className={`project-tab ${activeTab === 'shared' ? 'active' : ''}`}
+          onClick={() => setActiveTab('shared')}
+        >
+          Shared with me
+          {sharedDiagrams.length > 0 ? <span className="project-tab-count">{sharedDiagrams.length}</span> : null}
+        </button>
       </div>
+
+      {activeTab === 'mine' ? (
+        <>
+          <button className="project-new-btn" onClick={() => onNewDiagram(currentFolder || undefined)}>
+            + New Diagram{currentFolder ? ` in ${currentFolder.split('/').pop()}` : ''}
+          </button>
+          {currentFolder && (
+            <button
+              className="folder-reset-btn"
+              onClick={() => { setCurrentFolder(''); }}
+            >
+              Create at root instead
+            </button>
+          )}
+          <div id="projectList">
+            {renderFolder(tree, 0)}
+            {diagrams.length === 0 && (
+              <div style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
+                No diagrams yet. Create one!
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div id="projectList">
+          {sharedSorted.map(renderSharedDiagramItem)}
+          {sharedSorted.length === 0 && (
+            <div style={{ padding: '16px', color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
+              No shared diagrams yet.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Move-to-Folder Modal */}
       {movingDiagram && (

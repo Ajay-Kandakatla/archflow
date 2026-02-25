@@ -118,6 +118,7 @@ function AppInner() {
       dispatch({ type: 'LOAD_DIAGRAM', payload: { data: doc.data, id: doc._id, name: doc.name } });
       setDiagramName(doc.name);
       setShareRole(doc.role as 'owner' | 'editor' | 'viewer');
+      setShareAccessDenied(false);
       needsCenterRef.current = true;
     }).catch((err: any) => {
       if (err?.status === 403) {
@@ -125,6 +126,7 @@ function AppInner() {
       } else {
         showToast('Shared diagram not found');
       }
+      setShareRole(null);
     });
   }, [dispatch]);
 
@@ -141,14 +143,21 @@ function AppInner() {
       API.get(did).then(doc => {
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data: doc.data, id: doc._id, name: doc.name } });
         setDiagramName(doc.name);
+        setShareRole(doc.role || null);
+        setShareAccessDenied(false);
         needsCenterRef.current = true;
-      }).catch(() => {
-        // Invalid diagram ID in URL — clean it up
+      }).catch((err: any) => {
+        if (err?.status === 403) {
+          showToast('Access denied');
+        }
+        // Invalid/unavailable diagram ID in URL — clean it up
         history.replaceState(null, '', '/');
+        setShareRole(null);
       });
     } else if (did && !isValidId(did)) {
       // Clean up invalid ?d= param from URL
       history.replaceState(null, '', '/');
+      setShareRole(null);
     } else if (state.nodes.length === 0) {
       // No server diagram — try loading from localStorage
       const localData = loadLocalDiagram();
@@ -156,6 +165,7 @@ function AppInner() {
         const savedDiagramId = localStorage.getItem('archflow-diagramId') || '';
         const validSavedId = isValidId(savedDiagramId) ? savedDiagramId : '';
         dispatch({ type: 'LOAD_DIAGRAM', payload: { data: localData, id: validSavedId, name: 'Untitled Diagram' } });
+        setShareRole(null);
         if (validSavedId) {
           history.replaceState(null, '', '/?d=' + validSavedId);
         }
@@ -270,6 +280,7 @@ function AppInner() {
   // Template load
   const handleLoadTemplate = useCallback(async (name: string) => {
     setTemplateVisible(false);
+    setShareRole(null);
     const data = getTemplateData(name);
     if (!data) return;
 
@@ -298,11 +309,13 @@ function AppInner() {
   }, [state.authToken, state.currentDiagramId, dispatch]);
 
   // Load diagram by ID
-  const handleLoadDiagram = useCallback(async (id: string) => {
+  const handleLoadDiagram = useCallback(async (id: string, roleOverride?: 'owner' | 'editor' | 'viewer') => {
     try {
       const doc = await API.get(id);
       dispatch({ type: 'LOAD_DIAGRAM', payload: { data: doc.data, id: doc._id, name: doc.name } });
       setDiagramName(doc.name);
+      setShareRole(roleOverride || doc.role || null);
+      setShareAccessDenied(false);
       history.replaceState(null, '', '/?d=' + doc._id);
       dispatch({ type: 'TOGGLE_PROJECT_PANEL' });
     } catch (e) {
@@ -318,6 +331,8 @@ function AppInner() {
       dispatch({ type: 'CLEAR_CANVAS' });
       dispatch({ type: 'SET_DIAGRAM_ID', payload: result._id });
       setDiagramName('Untitled Diagram');
+      setShareRole(null);
+      setShareAccessDenied(false);
       history.replaceState(null, '', '/?d=' + result._id);
       dispatch({ type: 'TOGGLE_PROJECT_PANEL' });
     } catch (e) {
