@@ -531,8 +531,8 @@ const ARCH_TEMPLATES: Record<string, { keywords: string[]; description: string; 
 };
 
 function buildDiagram(
-  nodeSpecs: { type: string; x: number; y: number; title: string }[],
-  connectionSpecs: [number, number][],
+  nodeSpecs: { type: string; x: number; y: number; title: string; desc?: string }[],
+  connectionSpecs: ([number, number] | { from: number; to: number; label?: string })[],
 ): DiagramData {
   const nodes = nodeSpecs.map((spec, i) => {
     const ct = CT[spec.type];
@@ -544,15 +544,25 @@ function buildDiagram(
       y: spec.y,
       icon: ct.icon,
       title: spec.title,
-      desc: ct.desc,
+      desc: spec.desc || ct.desc,
       badge: ct.badge,
       color: ct.color,
     };
   }).filter(Boolean) as any[];
 
   const connections = connectionSpecs.map((spec, i) => {
-    const fromNode = nodes[spec[0]];
-    const toNode = nodes[spec[1]];
+    // Support both [from, to] arrays and {from, to, label} objects
+    let fromIdx: number, toIdx: number, label = '';
+    if (Array.isArray(spec)) {
+      fromIdx = spec[0];
+      toIdx = spec[1];
+    } else {
+      fromIdx = spec.from;
+      toIdx = spec.to;
+      label = spec.label || '';
+    }
+    const fromNode = nodes[fromIdx];
+    const toNode = nodes[toIdx];
     if (!fromNode || !toNode) return null;
     let fromPort = 'bottom';
     let toPort = 'top';
@@ -571,7 +581,7 @@ function buildDiagram(
       toType: 'node' as const,
       toPort,
       color: fromNode.color,
-      label: '',
+      label,
       direction: 'forward' as const,
       routing: 'bezier' as const,
     };

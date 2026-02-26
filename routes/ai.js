@@ -140,7 +140,7 @@ OBSERVABILITY:
 // =============================================
 // System prompt for architecture diagram generation
 // =============================================
-const SYSTEM_PROMPT = `You are an expert software architect. Generate architecture diagrams as structured JSON.
+const SYSTEM_PROMPT = `You are an expert software architect. Generate detailed architecture diagrams as structured JSON.
 
 ${ARCH_NODE_TYPES}
 
@@ -162,7 +162,14 @@ ARCHITECTURE PATTERNS:
 - BFF (Backend for Frontend): Separate server node per client type (mobile BFF, web BFF)
 - Zero Trust: auth at every layer, api-gateway validates tokens on every request
 
-CONNECTION FORMAT: connections is an array of [fromIndex, toIndex] pairs (0-based node indices).
+CONNECTION FORMAT: connections is an array of [fromIndex, toIndex, label] triples (0-based node indices).
+- The label describes what flows between the two nodes — use it to show request/response details, protocols, API endpoints, or data descriptions.
+- Examples: "POST /api/login {email, password}", "JWT access_token", "GET /products → Product[]", "Pub: order.created", "TCP :5432 SQL queries", "gRPC GetUser(userId)"
+
+NODE DESCRIPTIONS:
+- Each node MUST have a "desc" field with a specific, contextual description — NOT generic text.
+- The desc should explain the node's role, key APIs, tech stack, or data it handles in this specific architecture.
+- Examples: "React SPA — handles routing, auth state, API calls via Axios", "Validates JWT, rate limits 1000 req/min, routes to upstream services", "Stores user profiles, sessions, roles — pgBouncer pooling"
 
 CRITICAL RULES:
 1. ONLY use the exact type strings listed above — NEVER invent types like "micro-frontend", "spa", "web-app", "react-app", "identity-provider", etc.
@@ -172,16 +179,18 @@ CRITICAL RULES:
 5. Give each node a descriptive title (e.g., "Shell App", "Product Remote", "Auth Server", "Token Cache")
 6. Aim for 8-15 nodes — enough detail to be useful
 7. Return ONLY valid JSON — no markdown fences, no explanation
+8. Every node MUST include a "desc" field with specific technical details relevant to the architecture
+9. Every connection MUST include a label describing the data flow, protocol, or API endpoint
 
 OUTPUT FORMAT (strict JSON, no markdown):
 {
   "nodes": [
-    { "type": "browser", "title": "Shell App (SPA)", "x": 100, "y": 150 },
-    { "type": "browser", "title": "Product MFE", "x": 100, "y": 340 },
-    { "type": "api-gateway", "title": "API Gateway", "x": 400, "y": 250 },
-    { "type": "auth", "title": "Auth Server (OIDC)", "x": 700, "y": 150 }
+    { "type": "browser", "title": "Shell App (SPA)", "desc": "React 18 SPA — module federation host, handles auth state & routing", "x": 100, "y": 150 },
+    { "type": "browser", "title": "Product MFE", "desc": "Remote micro-frontend — product catalog, search, filtering UI", "x": 100, "y": 340 },
+    { "type": "api-gateway", "title": "API Gateway", "desc": "Kong Gateway — JWT validation, rate limiting, request routing", "x": 400, "y": 250 },
+    { "type": "auth", "title": "Auth Server (OIDC)", "desc": "Keycloak OIDC Provider — issues JWT, manages user sessions & roles", "x": 700, "y": 150 }
   ],
-  "connections": [[0, 2], [1, 2], [2, 3]]
+  "connections": [[0, 2, "GET /api/* with Bearer token"], [1, 2, "GET /api/products?q={query}"], [2, 3, "POST /token/introspect {access_token}"]]
 }`;
 
 // =============================================
@@ -205,8 +214,8 @@ router.post('/api/ai/generate', requireAuth, async (req, res) => {
 
   try {
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });
@@ -236,12 +245,20 @@ router.post('/api/ai/generate', requireAuth, async (req, res) => {
     const nodes = parsed.nodes.map(node => ({
       ...node,
       type: normalizeType(node.type),
+      desc: node.desc || '',
     }));
 
-    res.json({
-      nodes,
-      connections: Array.isArray(parsed.connections) ? parsed.connections : [],
-    });
+    // Normalize connections — support both [from, to] and [from, to, label] formats
+    const connections = Array.isArray(parsed.connections)
+      ? parsed.connections.map(c => {
+          if (Array.isArray(c)) {
+            return { from: c[0], to: c[1], label: c[2] || '' };
+          }
+          return c;
+        })
+      : [];
+
+    res.json({ nodes, connections });
   } catch (e) {
     console.error('AI generation error:', e.message);
     res.status(500).json({ error: 'AI generation failed' });
